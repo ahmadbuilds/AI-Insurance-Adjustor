@@ -18,7 +18,6 @@ import {
   ArrowRight,
   CheckCircle,
   Eye,
-  BarChart3,
   Database,
   Layers,
   GitBranch,
@@ -70,15 +69,14 @@ function UploadMockup() {
             <div className="text-xs text-white/70 truncate">{f}</div>
             <div className="w-full h-1 bg-white/10 rounded mt-1 overflow-hidden">
               <motion.div
-                key={animationKey}
-                className="h-full bg-gradient-to-r from-[#3B82F6] to-[#8B5CF6] rounded"
+                className="h-full bg-linear-to-r from-[#3B82F6] to-[#8B5CF6] rounded"
                 initial={{ width: "0%" }}
                 animate={{ width: "100%" }}
                 transition={{ duration: 1.5 + i * 0.4, delay: i * 0.3 }}
               />
             </div>
           </div>
-          <CheckCircle className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+          <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0" />
         </div>
       ))}
       {/* Claim ID badge */}
@@ -165,7 +163,7 @@ function StatusTrackingMockup() {
           <div key={i} className="flex gap-3 items-start">
             <div className="flex flex-col items-center">
               <motion.div
-                className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
+                className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${
                   s.done
                     ? "bg-emerald-500 border-emerald-500"
                     : (s as { active?: boolean }).active
@@ -232,7 +230,7 @@ function PayoutMockup() {
           { label: "Funds Deposited", status: "pending" },
         ].map((item, i) => (
           <div key={i} className="flex items-center gap-3">
-            <div className={`w-2 h-2 rounded-full flex-shrink-0 ${
+            <div className={`w-2 h-2 rounded-full shrink-0 ${
               item.status === "done" ? "bg-emerald-400" :
               item.status === "active" ? "bg-[#3B82F6] animate-pulse" :
               "bg-white/20"
@@ -261,7 +259,7 @@ function PolicyCheckMockup() {
         <span className="ml-2 text-xs text-white/30 font-mono">policy-checker.tsx</span>
       </div>
       <div className="bg-white/5 rounded-lg p-3 font-mono text-xs text-white/60 space-y-1">
-        <div><span className="text-purple-400">policy</span>.coverage = <span className="text-emerald-400">"comprehensive"</span></div>
+        <div><span className="text-purple-400">policy</span>.coverage = <span className="text-emerald-400">&quot;comprehensive&quot;</span></div>
         <div><span className="text-purple-400">liability</span>.score = <span className="text-yellow-400">87</span></div>
         <div><span className="text-purple-400">limit</span> = <span className="text-yellow-400">$25,000</span></div>
         <div><span className="text-purple-400">damage</span> = <span className="text-yellow-400">$14,850</span></div>
@@ -303,10 +301,10 @@ function AIMockup() {
       </div>
       <div className="bg-white/5 rounded-lg p-3 font-mono text-xs space-y-0.5">
         <div className="text-white/30">{"{"}</div>
-        <div className="pl-4"><span className="text-purple-400">"fault"</span>: <span className="text-emerald-400">"Rear-end collision, Driver B"</span>,</div>
-        <div className="pl-4"><span className="text-purple-400">"confidence"</span>: <span className="text-yellow-400">94</span>,</div>
-        <div className="pl-4"><span className="text-purple-400">"liability_percentage"</span>: <span className="text-yellow-400">85</span>,</div>
-        <div className="pl-4"><span className="text-purple-400">"reason_code"</span>: <span className="text-emerald-400">"RC-041"</span></div>
+        <div className="pl-4"><span className="text-purple-400">&quot;fault&quot;</span>: <span className="text-emerald-400">&quot;Rear-end collision, Driver B&quot;</span>,</div>
+        <div className="pl-4"><span className="text-purple-400">&quot;confidence&quot;</span>: <span className="text-yellow-400">94</span>,</div>
+        <div className="pl-4"><span className="text-purple-400">&quot;liability_percentage&quot;</span>: <span className="text-yellow-400">85</span>,</div>
+        <div className="pl-4"><span className="text-purple-400">&quot;reason_code&quot;</span>: <span className="text-emerald-400">&quot;RC-041&quot;</span></div>
         <div className="text-white/30">{"}"}</div>
       </div>
       <div className="space-y-2">
@@ -316,8 +314,7 @@ function AIMockup() {
         </div>
         <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden">
           <motion.div
-            key={animationKey}
-            className="h-full bg-gradient-to-r from-emerald-500 to-emerald-400 rounded-full"
+            className="h-full bg-linear-to-r from-emerald-500 to-emerald-400 rounded-full"
             initial={{ width: "0%" }}
             animate={{ width: "94%" }}
             transition={{ duration: 1.5, ease: "easeOut" }}
@@ -339,7 +336,7 @@ function IntakeMockup() {
         <span className="ml-2 text-xs text-white/30 font-mono">ai-intake.json</span>
       </div>
       <div className="text-xs text-white/40 italic bg-white/5 rounded p-2">
-        "I was hit from behind on Route 9 at 3:45 PM on March 2nd near the grocery store..."
+        &quot;I was hit from behind on Route 9 at 3:45 PM on March 2nd near the grocery store...&quot;
       </div>
       <div className="flex items-center gap-2">
         <div className="h-0.5 flex-1 bg-white/10" />
@@ -348,10 +345,10 @@ function IntakeMockup() {
       </div>
       <div className="bg-white/5 rounded-lg p-3 font-mono text-xs space-y-0.5">
         <div className="text-white/30">{"{"}</div>
-        <div className="pl-4"><span className="text-purple-400">"date"</span>: <span className="text-emerald-400">"2024-03-02"</span>,</div>
-        <div className="pl-4"><span className="text-purple-400">"time"</span>: <span className="text-emerald-400">"15:45"</span>,</div>
-        <div className="pl-4"><span className="text-purple-400">"location"</span>: <span className="text-emerald-400">"Route 9, near grocery"</span>,</div>
-        <div className="pl-4"><span className="text-purple-400">"damage_tags"</span>: <span className="text-yellow-400">["rear bumper", "trunk"]</span></div>
+        <div className="pl-4"><span className="text-purple-400">&quot;date&quot;</span>: <span className="text-emerald-400">&quot;2024-03-02&quot;</span>,</div>
+        <div className="pl-4"><span className="text-purple-400">&quot;time&quot;</span>: <span className="text-emerald-400">&quot;15:45&quot;</span>,</div>
+        <div className="pl-4"><span className="text-purple-400">&quot;location&quot;</span>: <span className="text-emerald-400">&quot;Route 9, near grocery&quot;</span>,</div>
+        <div className="pl-4"><span className="text-purple-400">&quot;damage_tags&quot;</span>: <span className="text-yellow-400">[&quot;rear bumper&quot;, &quot;trunk&quot;]</span></div>
         <div className="text-white/30">{"}"}</div>
       </div>
     </div>
@@ -382,7 +379,7 @@ function ReviewMockup() {
           </div>
           <div className="flex items-center gap-2">
             <div className="flex-1 h-1.5 bg-white/10 rounded-full overflow-hidden">
-              <div className="h-full bg-yellow-500 rounded-full" style={{ width: `${item.conf}%` }} />
+              <div className={`h-full bg-yellow-500 rounded-full ${item.conf === 62 ? "w-[62%]" : "w-[55%]"}`} />
             </div>
             <span className="text-xs text-white/50 font-mono">{item.conf}%</span>
           </div>
@@ -416,7 +413,7 @@ function AuditMockup() {
           { event: "Payout Triggered", detail: "$14,850 disbursed", conf: "—", time: "10:16:01", color: "emerald" },
         ].map((entry, i) => (
           <div key={i} className="flex gap-3 items-start">
-            <div className={`w-1.5 h-1.5 rounded-full mt-1.5 flex-shrink-0 ${
+            <div className={`w-1.5 h-1.5 rounded-full mt-1.5 shrink-0 ${
               entry.color === "blue" ? "bg-blue-400" :
               entry.color === "purple" ? "bg-purple-400" : "bg-emerald-400"
             }`} />
@@ -593,15 +590,6 @@ function useMouseParallax() {
   return pos;
 }
 
-// ─── Section wrapper ──────────────────────────────────────────────────────────
-function Section({ id, children, className = "" }: { id: string; children: React.ReactNode; className?: string }) {
-  return (
-    <section id={id} className={`relative ${className}`}>
-      {children}
-    </section>
-  );
-}
-
 // ─── Reveal wrapper ───────────────────────────────────────────────────────────
 function Reveal({ children, delay = 0, className = "" }: { children: React.ReactNode; delay?: number; className?: string }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -684,9 +672,8 @@ function Navbar() {
             }
             if (isHome) {
               return (
-                <a
+                <button
                   key={l.label}
-                  href="/"
                   onClick={(e) => {
                     e.preventDefault();
                     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -694,7 +681,7 @@ function Navbar() {
                   className="px-4 py-2 text-sm text-white/50 hover:text-white transition-colors rounded-lg hover:bg-white/5"
                 >
                   {l.label}
-                </a>
+                </button>
               );
             }
             return (
@@ -711,9 +698,9 @@ function Navbar() {
 
         {/* CTA */}
         <div className="hidden md:flex items-center gap-3">
-          <button className="px-4 py-2 text-sm bg-white text-black rounded-full font-medium hover:bg-white/90 transition-colors">
+          <Link href="/login" className="px-4 py-2 text-sm bg-white text-black rounded-full font-medium hover:bg-white/90 transition-colors">
             Sign in
-          </button>
+          </Link>
         </div>
 
         {/* Mobile toggle */}
@@ -760,7 +747,7 @@ function Navbar() {
                 );
               })}
               <div className="flex gap-3 mt-2">
-                <button className="flex-1 py-2 text-sm bg-white text-black rounded-lg font-medium">Sign in</button>
+                <Link href="/login" className="flex-1 py-2 text-sm bg-white text-black rounded-lg font-medium text-center" onClick={() => setMobileOpen(false)}>Sign in</Link>
               </div>
             </div>
           </motion.div>
@@ -808,7 +795,7 @@ function FeatureSidebarSection() {
     <div id="features" className="relative max-w-7xl mx-auto px-6">
       <div className="flex gap-8 lg:gap-12">
         {/* Sticky sidebar */}
-        <div className="hidden lg:block w-52 xl:w-60 flex-shrink-0">
+        <div className="hidden lg:block w-52 xl:w-60 shrink-0">
           <div className="sticky top-28 pt-4">
             <div className="text-xs text-white/30 uppercase tracking-widest font-medium mb-4 px-2">
               Features
@@ -825,10 +812,10 @@ function FeatureSidebarSection() {
                   }`}
                 >
                   {/* Active indicator line */}
-                  <div className={`w-0.5 h-4 rounded-full flex-shrink-0 transition-all duration-300 ${
+                  <div className={`w-0.5 h-4 rounded-full shrink-0 transition-all duration-300 ${
                     activeIdx === i ? "bg-[#3B82F6]" : "bg-transparent"
                   }`} />
-                  <span className={`flex-shrink-0 transition-colors ${activeIdx === i ? "text-[#3B82F6]" : "text-white/30 group-hover:text-white/60"}`}>
+                  <span className={`shrink-0 transition-colors ${activeIdx === i ? "text-[#3B82F6]" : "text-white/30 group-hover:text-white/60"}`}>
                     {f.icon}
                   </span>
                   <span className="text-sm font-medium truncate">{f.label}</span>
@@ -866,7 +853,7 @@ function FeatureSidebarSection() {
                       <ul className="space-y-2.5">
                         {f.bullets.map((b, bi) => (
                           <li key={bi} className="flex items-start gap-2.5 text-sm text-white/60">
-                            <CheckCircle className="w-4 h-4 text-[#3B82F6] mt-0.5 flex-shrink-0" />
+                            <CheckCircle className="w-4 h-4 text-[#3B82F6] mt-0.5 shrink-0" />
                             {b}
                           </li>
                         ))}
@@ -876,9 +863,9 @@ function FeatureSidebarSection() {
 
                   {/* Mockup side */}
                   <Reveal className="flex-1 min-w-0 w-full" delay={0.15}>
-                    <div className="relative w-full aspect-[4/3] max-w-lg mx-auto">
+                    <div className="relative w-full aspect-4/3 max-w-lg mx-auto">
                       {/* Glow */}
-                      <div className="absolute inset-0 -m-4 rounded-2xl opacity-30 blur-2xl bg-gradient-to-br from-[#3B82F6]/40 via-[#8B5CF6]/20 to-transparent" />
+                      <div className="absolute inset-0 -m-4 rounded-2xl opacity-30 blur-2xl bg-linear-to-br from-[#3B82F6]/40 via-[#8B5CF6]/20 to-transparent" />
                       {f.mockup}
                     </div>
                   </Reveal>
@@ -886,7 +873,7 @@ function FeatureSidebarSection() {
 
                 {/* Divider */}
                 {i < FEATURES.length - 1 && (
-                  <div className="mt-20 lg:mt-28 h-px bg-gradient-to-r from-transparent via-white/8 to-transparent" />
+                  <div className="mt-20 lg:mt-28 h-px bg-linear-to-r from-transparent via-white/8 to-transparent" />
                 )}
               </div>
             );
@@ -906,7 +893,7 @@ function StatsBar() {
     { value: "0", label: "Manual disbursements" },
   ];
   return (
-    <div className="border-y border-white/5 bg-white/[0.02]">
+    <div className="border-y border-white/5 bg-white/2">
       <div className="max-w-7xl mx-auto px-6 py-10">
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
           {stats.map((s, i) => (
@@ -941,7 +928,7 @@ function HowItWorks() {
       </Reveal>
       <div className="relative">
         {/* Connecting line */}
-        <div className="hidden lg:block absolute top-10 left-[calc(12.5%-1px)] right-[calc(12.5%-1px)] h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+        <div className="hidden lg:block absolute top-10 left-[calc(12.5%-1px)] right-[calc(12.5%-1px)] h-px bg-linear-to-r from-transparent via-white/10 to-transparent" />
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
           {steps.map((s, i) => (
             <Reveal key={i} delay={i * 0.12}>
@@ -1004,7 +991,7 @@ function TestimonialsSection() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
         {testimonials.map((t, i) => (
           <Reveal key={i} delay={i * 0.1}>
-            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-white/5 to-white/[0.02] border border-white/10 p-8 flex flex-col h-full hover:border-white/20 transition-colors">
+            <div className="relative overflow-hidden rounded-2xl bg-linear-to-br from-white/5 to-white/2 border border-white/10 p-8 flex flex-col h-full hover:border-white/20 transition-colors">
               {/* Ambient glow */}
               <div className="absolute -top-8 -right-8 w-32 h-32 bg-[#3B82F6]/10 rounded-full blur-2xl" />
               
@@ -1017,11 +1004,11 @@ function TestimonialsSection() {
                 </div>
 
                 {/* Testimonial text */}
-                <p className="text-white/70 leading-relaxed mb-8 flex-1">"{t.text}"</p>
+                <p className="text-white/70 leading-relaxed mb-8 flex-1">&quot;{t.text}&quot;</p>
 
                 {/* User info */}
                 <div className="flex items-center gap-4">
-                  <img src={t.image} alt={t.name} className="w-14 h-14 rounded-full object-cover border border-white/10" />
+                  <Image src={t.image} alt={t.name} width={56} height={56} className="w-14 h-14 rounded-full object-cover border border-white/10" />
                   <div>
                     <div className="text-sm font-semibold text-white">{t.name}</div>
                     <div className="text-xs text-white/40">{t.role}</div>
@@ -1055,7 +1042,7 @@ function ContactSection() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-16">
         {/* Contact info cards */}
         <Reveal delay={0.1}>
-          <div className="bg-gradient-to-br from-white/5 to-white/[0.02] border border-white/10 rounded-2xl p-8 h-full flex flex-col justify-between">
+          <div className="bg-linear-to-br from-white/5 to-white/2 border border-white/10 rounded-2xl p-8 h-full flex flex-col justify-between">
             <div>
               <div className="flex items-center gap-4 mb-4">
                 <div className="w-12 h-12 rounded-lg bg-[#3B82F6]/20 flex items-center justify-center text-[#3B82F6]">
@@ -1073,7 +1060,7 @@ function ContactSection() {
         </Reveal>
 
         <Reveal delay={0.2}>
-          <div className="bg-gradient-to-br from-white/5 to-white/[0.02] border border-white/10 rounded-2xl p-8">
+          <div className="bg-linear-to-br from-white/5 to-white/2 border border-white/10 rounded-2xl p-8">
             <div className="flex items-center gap-4 mb-4">
               <div className="w-12 h-12 rounded-lg bg-[#3B82F6]/20 flex items-center justify-center text-[#3B82F6]">
                 <Activity className="w-5 h-5" />
@@ -1121,7 +1108,7 @@ function ContactSection() {
         </Reveal>
 
         <Reveal delay={0.3}>
-          <div className="bg-gradient-to-br from-white/5 to-white/[0.02] border border-white/10 rounded-2xl p-8 h-full flex flex-col justify-between">
+          <div className="bg-linear-to-br from-white/5 to-white/2 border border-white/10 rounded-2xl p-8 h-full flex flex-col justify-between">
             <div>
               <div className="flex items-center gap-4 mb-4">
                 <div className="w-12 h-12 rounded-lg bg-[#3B82F6]/20 flex items-center justify-center text-[#3B82F6]">
@@ -1143,7 +1130,7 @@ function ContactSection() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Form */}
         <Reveal delay={0.1}>
-          <div className="bg-gradient-to-br from-white/5 to-white/[0.02] border border-white/10 rounded-2xl p-8">
+          <div className="bg-linear-to-br from-white/5 to-white/2 border border-white/10 rounded-2xl p-8">
             <h3 className="text-lg font-semibold text-white mb-6">Send us a message</h3>
             <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); setFormData({ name: "", email: "", message: "" }); }}>
               <div>
@@ -1178,7 +1165,7 @@ function ContactSection() {
               </div>
               <button
                 type="submit"
-                className="w-full bg-gradient-to-r from-[#3B82F6] to-[#8B5CF6] text-white rounded-lg px-6 py-3 font-medium hover:shadow-lg hover:shadow-[#3B82F6]/20 transition-all"
+                className="w-full bg-linear-to-r from-[#3B82F6] to-[#8B5CF6] text-white rounded-lg px-6 py-3 font-medium hover:shadow-lg hover:shadow-[#3B82F6]/20 transition-all"
               >
                 Send message
               </button>
@@ -1188,14 +1175,14 @@ function ContactSection() {
 
         {/* Map */}
         <Reveal delay={0.2}>
-          <div className="bg-gradient-to-br from-white/5 to-white/[0.02] border border-white/10 rounded-2xl overflow-hidden h-full min-h-96">
+          <div className="bg-linear-to-br from-white/5 to-white/2 border border-white/10 rounded-2xl overflow-hidden h-full min-h-96">
             <iframe
+              title="FAST NUCES Lahore map"
               src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3382.0636835482545!2d74.3030141!3d31.4815212!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x391903f08ebc7e8b%3A0x47e934f4cd34790!2sFAST%20NUCES%20Lahore!5e0!3m2!1sen!2s!4v1709800000000"
               width="100%"
               height="100%"
-              style={{ border: 0, minHeight: "400px" }}
+              className="border-0 min-h-100"
               allowFullScreen={true}
-              loading="lazy"
               referrerPolicy="no-referrer-when-downgrade"
             />
           </div>
@@ -1265,13 +1252,7 @@ function Hero() {
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-[#030712]">
       {/* Grid background */}
-      <div
-        className="absolute inset-0 opacity-[0.035]"
-        style={{
-          backgroundImage: `linear-gradient(rgba(255,255,255,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.5) 1px, transparent 1px)`,
-          backgroundSize: "60px 60px",
-        }}
-      />
+      <div className="absolute inset-0 opacity-[0.035] bg-[linear-gradient(rgba(255,255,255,0.5)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.5)_1px,transparent_1px)] bg-size-[60px_60px]" />
 
       {/* Radial glow — follows mouse */}
       <motion.div
@@ -1309,7 +1290,7 @@ function Hero() {
         >
           Claims settled
           <br />
-          <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#3B82F6] via-[#6366F1] to-[#8B5CF6]">
+          <span className="text-transparent bg-clip-text bg-linear-to-r from-[#3B82F6] via-[#6366F1] to-[#8B5CF6]">
             by intelligence
           </span>
         </motion.h1>
@@ -1331,10 +1312,10 @@ function Hero() {
           transition={{ duration: 0.7, delay: 0.44, ease: [0.16, 1, 0.3, 1] }}
           className="flex flex-col sm:flex-row gap-4 justify-center"
         >
-          <button className="inline-flex items-center justify-center gap-2 px-8 py-3.5 bg-white text-black rounded-full font-medium text-sm hover:bg-white/90 transition-all hover:scale-[1.02] active:scale-[0.98]">
+          <Link href="/login" className="inline-flex items-center justify-center gap-2 px-8 py-3.5 bg-white text-black rounded-full font-medium text-sm hover:bg-white/90 transition-all hover:scale-[1.02] active:scale-[0.98]">
             File a claim <ArrowRight className="w-4 h-4" />
-          </button>
-          <button className="inline-flex items-center justify-center gap-2 px-8 py-3.5 border border-white/10 text-white/70 rounded-full text-sm hover:bg-white/5 hover:text-white transition-all hover:border-white/20">
+          </Link>
+          <button onClick={() => document.getElementById("features")?.scrollIntoView({ behavior: "smooth" })} className="inline-flex items-center justify-center gap-2 px-8 py-3.5 border border-white/10 text-white/70 rounded-full text-sm hover:bg-white/5 hover:text-white transition-all hover:border-white/20">
             See how it works <ChevronRight className="w-4 h-4" />
           </button>
         </motion.div>
@@ -1356,7 +1337,7 @@ function Hero() {
       </motion.div>
 
       {/* Bottom gradient fade */}
-      <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-[#030712] to-transparent pointer-events-none" />
+      <div className="absolute bottom-0 left-0 right-0 h-32 bg-linear-to-t from-[#030712] to-transparent pointer-events-none" />
     </section>
   );
 }
@@ -1396,3 +1377,4 @@ export default function Home() {
     </div>
   );
 }
+
