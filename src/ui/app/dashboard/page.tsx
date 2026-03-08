@@ -56,7 +56,7 @@ export default async function DashboardPage() {
         {/* Cards */}
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {/* Claims */}
-          <div className="group relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-white/5 to-white/[0.02] p-6 hover:border-[#3B82F6]/30 transition-all duration-300">
+          <Link href="/claims" className="group relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-white/5 to-white/[0.02] p-6 hover:border-[#3B82F6]/30 transition-all duration-300">
             <div className="absolute -top-8 -right-8 w-32 h-32 bg-[#3B82F6]/10 rounded-full blur-2xl opacity-0 group-hover:opacity-100 transition-opacity" />
             <div className="relative">
               <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-xl bg-[#3B82F6]/15 ring-1 ring-[#3B82F6]/25">
@@ -69,13 +69,13 @@ export default async function DashboardPage() {
                 View and manage your insurance claims.
               </p>
               <div className="flex items-center gap-1.5 text-xs text-[#3B82F6]/70">
-                <span>View claims</span>
+                <span>Submit a claim</span>
                 <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                 </svg>
               </div>
             </div>
-          </div>
+          </Link>
 
           {/* Analytics */}
           <div className="group relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-white/5 to-white/[0.02] p-6 hover:border-emerald-500/30 transition-all duration-300">
