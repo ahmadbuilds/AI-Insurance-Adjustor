@@ -298,14 +298,6 @@ export default function ClaimsPage() {
         {/* ── Card shell (matches mockup window chrome) ── */}
         <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-white/5 to-white/[0.02] overflow-hidden shadow-2xl shadow-black/40">
 
-          {/* Fake window chrome */}
-          <div className="flex items-center gap-2 border-b border-white/8 px-5 py-3.5">
-            <div className="w-3 h-3 rounded-full bg-red-500/70" />
-            <div className="w-3 h-3 rounded-full bg-yellow-500/70" />
-            <div className="w-3 h-3 rounded-full bg-green-500/70" />
-            <span className="ml-2 text-xs text-white/25 font-mono">claim-upload.tsx</span>
-          </div>
-
           <div className="p-6 space-y-6">
 
             {/* ── Claim Title ── */}
