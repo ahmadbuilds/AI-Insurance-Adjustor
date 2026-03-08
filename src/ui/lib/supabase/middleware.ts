@@ -36,6 +36,7 @@ export async function updateSession(request: NextRequest) {
   // Protected routes - redirect to login if not authenticated
   if (
     !user &&
+    request.nextUrl.pathname !== "/" &&
     !request.nextUrl.pathname.startsWith("/login") &&
     !request.nextUrl.pathname.startsWith("/auth") &&
     !request.nextUrl.pathname.startsWith("/confirm-email") &&
