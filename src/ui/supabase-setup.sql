@@ -337,44 +337,7 @@ CREATE TRIGGER on_disputes_updated
 -- ============================================
 -- 13. Storage RLS policies for dispute_images bucket
 -- Make sure the bucket "dispute_images" exists in Supabase Storage dashboard
--- ============================================
-
--- Users can upload dispute attachments into their own folder
-CREATE POLICY "Users can upload dispute attachments"
-  ON storage.objects FOR INSERT
-  WITH CHECK (
-    bucket_id = 'dispute_images'
-    AND (storage.foldername(name))[1] = auth.uid()::text
-  );
-
--- Users can read their own dispute attachments
-CREATE POLICY "Users can read own dispute attachments"
-  ON storage.objects FOR SELECT
-  USING (
-    bucket_id = 'dispute_images'
-    AND (storage.foldername(name))[1] = auth.uid()::text
-  );
-
--- Users can delete their own dispute attachments
-CREATE POLICY "Users can delete own dispute attachments"
-  ON storage.objects FOR DELETE
-  USING (
-    bucket_id = 'dispute_images'
-    AND (storage.foldername(name))[1] = auth.uid()::text
-  );
-
--- Admins can read all dispute attachments
-CREATE POLICY "Admins can read all dispute attachments"
-  ON storage.objects FOR SELECT
-  USING (
-    bucket_id = 'dispute_images'
-    AND public.is_admin()
-  );
-
--- ============================================
--- 14. Storage RLS policies for dispute_images bucket
--- Make sure the bucket "dispute_images" exists in Supabase Storage dashboard
--- Used for image uploads related to disputes
+-- Path pattern: {user_id}/{claim_id}/{timestamp}-{filename}
 -- ============================================
 
 -- Users can upload dispute images into their own folder
@@ -388,6 +351,14 @@ CREATE POLICY "Users can upload dispute images"
 -- Users can read their own dispute images
 CREATE POLICY "Users can read own dispute images"
   ON storage.objects FOR SELECT
+  USING (
+    bucket_id = 'dispute_images'
+    AND (storage.foldername(name))[1] = auth.uid()::text
+  );
+
+-- Users can update their own dispute images
+CREATE POLICY "Users can update own dispute images"
+  ON storage.objects FOR UPDATE
   USING (
     bucket_id = 'dispute_images'
     AND (storage.foldername(name))[1] = auth.uid()::text
