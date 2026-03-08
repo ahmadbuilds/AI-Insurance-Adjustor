@@ -282,7 +282,7 @@ function DisputeForm({
                 <Upload className="w-6 h-6 text-[#3B82F6]" />
               </div>
               <div className="min-w-0">
-                <p className="text-base font-semibold text-white/90 group-hover:text-white transition-colors">Upload evidence document</p>
+                <p className="text-base font-semibold text-white/90 group-hover:text-white transition-colors">Upload Evidence Document</p>
                 {evidenceFile ? (
                   <p className="text-[10px] text-emerald-400 truncate mt-0.5">{evidenceFile.name}</p>
                 ) : (
