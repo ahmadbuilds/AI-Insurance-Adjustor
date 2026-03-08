@@ -47,7 +47,8 @@ function UploadMockup() {
     return () => clearInterval(interval);
   }, []);
   return (
-    <div className="relative w-full h-full bg-[#0a0e1a] rounded-xl border border-white/10 overflow-hidden p-6 flex flex-col gap-4">
+    // keyed container to re-mount every interval
+    <div key={animationKey} className="relative w-full h-full bg-[#0a0e1a] rounded-xl border border-white/10 overflow-hidden p-6 flex flex-col gap-4">
       <div className="flex items-center gap-2 mb-2">
         <div className="w-3 h-3 rounded-full bg-red-500/70" />
         <div className="w-3 h-3 rounded-full bg-yellow-500/70" />
@@ -69,6 +70,7 @@ function UploadMockup() {
             <div className="text-xs text-white/70 truncate">{f}</div>
             <div className="w-full h-1 bg-white/10 rounded mt-1 overflow-hidden">
               <motion.div
+                key={animationKey}
                 className="h-full bg-linear-to-r from-[#3B82F6] to-[#8B5CF6] rounded"
                 initial={{ width: "0%" }}
                 animate={{ width: "100%" }}
@@ -292,7 +294,8 @@ function AIMockup() {
     return () => clearInterval(interval);
   }, []);
   return (
-    <div className="relative w-full h-full bg-[#0a0e1a] rounded-xl border border-white/10 overflow-hidden p-6 flex flex-col gap-4">
+    // keyed container to force full remount each cycle
+    <div key={animationKey} className="relative w-full h-full bg-[#0a0e1a] rounded-xl border border-white/10 overflow-hidden p-6 flex flex-col gap-4">
       <div className="flex items-center gap-2 mb-2">
         <div className="w-3 h-3 rounded-full bg-red-500/70" />
         <div className="w-3 h-3 rounded-full bg-yellow-500/70" />
@@ -314,6 +317,7 @@ function AIMockup() {
         </div>
         <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden">
           <motion.div
+            key={animationKey}
             className="h-full bg-linear-to-r from-emerald-500 to-emerald-400 rounded-full"
             initial={{ width: "0%" }}
             animate={{ width: "94%" }}
