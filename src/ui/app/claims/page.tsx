@@ -1,66 +1,127 @@
 "use client";
 
 import { useState, useRef, useCallback } from "react";
-import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import Navbar from "@/components/Navbar";
 
 const MAX_IMAGES = 10;
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
+const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp"];
 
-interface ImagePreview {
+// Title may only contain letters, spaces, hyphens, apostrophes, and common punctuation — no digits or symbols
+const TITLE_REGEX = /^[a-zA-Z\s\-',.!?()&]+$/;
+
+function validateTitle(v: string): string | null {
+  if (!v.trim()) return null; // presence handled separately
+  if (!TITLE_REGEX.test(v)) return "Title may only contain letters and punctuation — no numbers or special characters.";
+  return null;
+}
+
+interface ImageFile {
   file: File;
   url: string;
   id: string;
+}
+
+// Compact row-style image item — matches claim-upload.tsx mockup aesthetic
+function ImageRow({ img, onRemove }: { img: ImageFile; onRemove: () => void }) {
+  const sizeMB = (img.file.size / 1024 / 1024).toFixed(1);
+
+  return (
+    <div className="flex items-center gap-3 rounded-lg bg-white/5 px-3 py-2.5 border border-white/8 group">
+      {/* Small thumbnail */}
+      <div className="relative h-9 w-9 shrink-0 rounded-md overflow-hidden bg-[#3B82F6]/20 ring-1 ring-[#3B82F6]/30">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={img.url} alt={img.file.name} className="h-full w-full object-cover" />
+      </div>
+
+      {/* Name + size + progress bar */}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center justify-between mb-1">
+          <p className="text-xs text-white/70 truncate pr-2">{img.file.name}</p>
+          <span className="text-[10px] text-white/35 shrink-0">{sizeMB} MB</span>
+        </div>
+        {/* Static "uploaded" bar */}
+        <div className="w-full h-1 rounded-full bg-white/10 overflow-hidden">
+          <div className="h-full w-full rounded-full bg-gradient-to-r from-[#3B82F6] to-[#8B5CF6]" />
+        </div>
+      </div>
+
+      {/* Check + remove */}
+      <div className="flex items-center gap-1.5 shrink-0">
+        <svg className="h-4 w-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <button
+          onClick={onRemove}
+          title="Remove image"
+          className="flex h-5 w-5 items-center justify-center rounded text-white/25 hover:text-red-400 hover:bg-red-500/10 transition-all opacity-0 group-hover:opacity-100"
+        >
+          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+    </div>
+  );
 }
 
 export default function ClaimsPage() {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [title, setTitle] = useState("");
+  const [title, setTitle]           = useState("");
   const [description, setDescription] = useState("");
-  const [images, setImages] = useState<ImagePreview[]>([]);
-  const [dragOver, setDragOver] = useState(false);
+  const [images, setImages]         = useState<ImageFile[]>([]);
+  const [dragOver, setDragOver]     = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
+  const [error, setError]           = useState<string | null>(null);
+  const [success, setSuccess]       = useState<string | null>(null);
+
+  // Touched state for inline validation
+  const [touchedTitle, setTouchedTitle] = useState(false);
+  const [touchedDescription, setTouchedDescription] = useState(false);
+
+  const titleError   = validateTitle(title);
+  const titleMissing = touchedTitle && !title.trim();
+
+  // Word count helper
+  const wordCount = description.trim() === "" ? 0 : description.trim().split(/\s+/).length;
+  const descriptionError = touchedDescription && description.trim() !== "" && wordCount < 200
+    ? `At least 200 words required. (${wordCount}/200)`
+    : touchedDescription && !description.trim()
+    ? "Description is required."
+    : null;
+  const descriptionValid = description.trim() !== "" && wordCount >= 200;
+
+  // Presence check for button gating
+  const formFilled = title.trim() !== "" && description.trim() !== "" && images.length > 0;
+  const formValid  = formFilled && !titleError && descriptionValid;
 
   // ─── Image handling ──────────────────────────────────────────────────────────
 
-  const addImages = useCallback(
-    (files: FileList | File[]) => {
-      const fileArray = Array.from(files);
-      const newImages: ImagePreview[] = [];
-      const errors: string[] = [];
+  const addImages = useCallback((files: FileList | File[]) => {
+    const fileArray = Array.from(files);
+    const newImages: ImageFile[] = [];
+    const errs: string[] = [];
 
-      for (const file of fileArray) {
-        if (images.length + newImages.length >= MAX_IMAGES) {
-          errors.push(`Maximum ${MAX_IMAGES} images allowed.`);
-          break;
-        }
-        if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) {
-          errors.push(`"${file.name}" is not a supported image type.`);
-          continue;
-        }
-        if (file.size > MAX_FILE_SIZE) {
-          errors.push(`"${file.name}" exceeds the 10 MB limit.`);
-          continue;
-        }
-        newImages.push({
-          file,
-          url: URL.createObjectURL(file),
-          id: crypto.randomUUID(),
-        });
+    for (const file of fileArray) {
+      if (images.length + newImages.length >= MAX_IMAGES) {
+        errs.push(`Maximum ${MAX_IMAGES} images allowed.`); break;
       }
+      if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) {
+        errs.push(`"${file.name}" is not a supported image type.`); continue;
+      }
+      if (file.size > MAX_FILE_SIZE) {
+        errs.push(`"${file.name}" exceeds the 10 MB limit.`); continue;
+      }
+      newImages.push({ file, url: URL.createObjectURL(file), id: crypto.randomUUID() });
+    }
 
-      if (errors.length) setError(errors.join(" "));
-      if (newImages.length) setImages((prev) => [...prev, ...newImages]);
-    },
-    [images.length],
-  );
+    if (errs.length) setError(errs.join(" "));
+    if (newImages.length) setImages((prev) => [...prev, ...newImages]);
+  }, [images.length]);
 
   const removeImage = (id: string) => {
     setImages((prev) => {
@@ -70,16 +131,11 @@ export default function ClaimsPage() {
     });
   };
 
-  // ─── Drag & Drop ────────────────────────────────────────────────────────────
-
-  const handleDrop = useCallback(
-    (e: React.DragEvent) => {
-      e.preventDefault();
-      setDragOver(false);
-      if (e.dataTransfer.files.length) addImages(e.dataTransfer.files);
-    },
-    [addImages],
-  );
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(false);
+    if (e.dataTransfer.files.length) addImages(e.dataTransfer.files);
+  }, [addImages]);
 
   // ─── Submit ──────────────────────────────────────────────────────────────────
 
@@ -87,44 +143,25 @@ export default function ClaimsPage() {
     setError(null);
     setSuccess(null);
 
-    if (!title.trim()) {
-      setError("Please enter a claim title.");
-      return;
-    }
-    if (!description.trim()) {
-      setError("Please enter a claim description.");
-      return;
-    }
-    if (images.length === 0) {
-      setError("Please upload at least one image for your claim.");
-      return;
-    }
+    if (!title.trim()) { setError("Please enter a claim title."); return; }
+    if (titleError)    { setError(titleError); return; }
+    if (!description.trim()) { setError("Please enter a claim description."); return; }
+    if (images.length === 0) { setError("Please upload at least one image."); return; }
 
     setSubmitting(true);
 
     try {
       const supabase = createClient();
-
-      // 1. Verify user is authenticated
-      const {
-        data: { user },
-        error: authError,
-      } = await supabase.auth.getUser();
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
       if (authError || !user) {
         setError("You must be logged in to submit a claim.");
         setSubmitting(false);
         return;
       }
 
-      // 2. Insert claim record
       const { data: claim, error: claimError } = await supabase
         .from("claims")
-        .insert({
-          user_id: user.id,
-          title: title.trim(),
-          description: description.trim(),
-          status: "pending",
-        })
+        .insert({ user_id: user.id, title: title.trim(), description: description.trim(), status: "pending" })
         .select("id")
         .single();
 
@@ -134,14 +171,9 @@ export default function ClaimsPage() {
         return;
       }
 
-      // 3. Upload images to claim_images storage bucket
       const imageRecords: {
-        claim_id: string;
-        user_id: string;
-        storage_path: string;
-        file_name: string;
-        file_size: number;
-        mime_type: string;
+        claim_id: string; user_id: string; storage_path: string;
+        file_name: string; file_size: number; mime_type: string;
       }[] = [];
 
       for (const img of images) {
@@ -159,55 +191,34 @@ export default function ClaimsPage() {
         }
 
         imageRecords.push({
-          claim_id: claim.id,
-          user_id: user.id,
-          storage_path: storagePath,
-          file_name: img.file.name,
-          file_size: img.file.size,
-          mime_type: img.file.type,
+          claim_id: claim.id, user_id: user.id, storage_path: storagePath,
+          file_name: img.file.name, file_size: img.file.size, mime_type: img.file.type,
         });
       }
 
-      // 4. Insert image records into claim_images table
-      const { error: imgInsertError } = await supabase
-        .from("claim_images")
-        .insert(imageRecords);
-
+      const { error: imgInsertError } = await supabase.from("claim_images").insert(imageRecords);
       if (imgInsertError) {
         setError(`Claim created but image records failed: ${imgInsertError.message}`);
         setSubmitting(false);
         return;
       }
 
-      // 5. Publish event to backend via FastAPI
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-
+      const { data: { session } } = await supabase.auth.getSession();
       if (session?.access_token) {
         const backendUrl = process.env.NEXT_PUBLIC_BACKEND_API_URL || "http://localhost:8000";
-
-        await fetch(
-          `${backendUrl}/publish_event?event_channel=claim_evaluation_${claim.id}`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${session.access_token}`,
-            },
-            body: JSON.stringify({
-              claim_id: claim.id,
-              user_id: user.id,
-              action: "start_evaluation",
-            }),
-          },
-        );
+        await fetch(`${backendUrl}/publish_event?event_channel=claim_evaluation_${claim.id}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
+          body: JSON.stringify({ claim_id: claim.id, user_id: user.id, action: "start_evaluation" }),
+        });
       }
 
       setSuccess("Claim submitted successfully! Your claim is now pending AI evaluation.");
       setTitle("");
       setDescription("");
       setImages([]);
+      setTouchedTitle(false);
+      setTouchedDescription(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : "An unexpected error occurred.");
     } finally {
@@ -219,10 +230,9 @@ export default function ClaimsPage() {
 
   return (
     <div className="relative min-h-screen bg-[#030712] overflow-hidden">
-      {/* Grid background */}
+      {/* Grid */}
       <div className="absolute inset-0 opacity-[0.035] bg-[linear-gradient(rgba(255,255,255,0.5)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.5)_1px,transparent_1px)] bg-[size:60px_60px]" />
-
-      {/* Radial glows */}
+      {/* Glows */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
         <div className="absolute -top-32 left-1/2 h-[600px] w-[600px] -translate-x-1/2 rounded-full bg-[#3B82F6]/10 blur-3xl" />
         <div className="absolute bottom-0 right-1/4 h-[400px] w-[400px] rounded-full bg-[#8B5CF6]/8 blur-3xl" />
@@ -230,52 +240,54 @@ export default function ClaimsPage() {
 
       <Navbar />
 
-      <main className="relative mx-auto max-w-3xl px-6 py-12">
-        {/* Header */}
+      <main className="relative mx-auto max-w-2xl px-6 py-12">
+
+        {/* Back + header */}
         <div className="mb-10">
-          <button
-            onClick={() => router.push("/dashboard")}
-            className="inline-flex items-center gap-2 text-sm text-white/40 hover:text-white/70 transition-colors mb-6"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-            Back to Dashboard
-          </button>
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-white/10 bg-white/5 text-xs text-white/50 mb-6">
-            <div className="w-1.5 h-1.5 rounded-full bg-[#3B82F6] animate-pulse" />
-            New Claim
+          <div className="mb-8">
+            <button
+              onClick={() => router.push("/dashboard")}
+              className="inline-flex items-center gap-2 text-sm text-white/40 hover:text-white/70 transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+              Back to Dashboard
+            </button>
           </div>
-          <h1 className="text-3xl font-semibold text-white tracking-tight">
-            Submit a Claim
-          </h1>
+          <div className="mb-5">
+            <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-white/10 bg-white/5 text-xs text-white/50">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#3B82F6] animate-pulse inline-block" />
+              New Claim
+            </span>
+          </div>
+          <h1 className="text-3xl font-semibold text-white tracking-tight">Submit a Claim</h1>
           <p className="mt-2 text-white/40 text-sm">
-            Upload images and describe your claim. Our AI agents will evaluate it automatically.
+            Upload evidence and describe your claim. Our AI agents will evaluate it automatically.
           </p>
         </div>
 
         {/* Alerts */}
         {error && (
           <div className="mb-6 flex items-start gap-3 rounded-xl border border-red-500/20 bg-red-500/5 p-4">
-            <svg className="h-5 w-5 shrink-0 text-red-400 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="h-4 w-4 shrink-0 text-red-400 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
-            <p className="text-sm text-red-300">{error}</p>
-            <button onClick={() => setError(null)} className="ml-auto text-red-400/60 hover:text-red-300" title="Dismiss error">
+            <p className="text-sm text-red-300 flex-1">{error}</p>
+            <button onClick={() => setError(null)} className="text-red-400/50 hover:text-red-300 transition-colors">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
           </div>
         )}
-
         {success && (
           <div className="mb-6 flex items-start gap-3 rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4">
-            <svg className="h-5 w-5 shrink-0 text-emerald-400 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="h-4 w-4 shrink-0 text-emerald-400 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
             </svg>
-            <p className="text-sm text-emerald-300">{success}</p>
-            <button onClick={() => setSuccess(null)} className="ml-auto text-emerald-400/60 hover:text-emerald-300" title="Dismiss">
+            <p className="text-sm text-emerald-300 flex-1">{success}</p>
+            <button onClick={() => setSuccess(null)} className="text-emerald-400/50 hover:text-emerald-300 transition-colors">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
@@ -283,165 +295,200 @@ export default function ClaimsPage() {
           </div>
         )}
 
-        {/* Form */}
-        <div className="space-y-8">
-          {/* Title */}
-          <div>
-            <label className="block text-sm font-medium text-white/70 mb-2">
-              Claim Title
-            </label>
-            <input
-              type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="e.g. Water damage in kitchen"
-              maxLength={200}
-              className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white placeholder:text-white/25 outline-none focus:border-[#3B82F6]/50 focus:ring-2 focus:ring-[#3B82F6]/20 transition-all"
-            />
+        {/* ── Card shell (matches mockup window chrome) ── */}
+        <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-white/5 to-white/[0.02] overflow-hidden shadow-2xl shadow-black/40">
+
+          {/* Fake window chrome */}
+          <div className="flex items-center gap-2 border-b border-white/8 px-5 py-3.5">
+            <div className="w-3 h-3 rounded-full bg-red-500/70" />
+            <div className="w-3 h-3 rounded-full bg-yellow-500/70" />
+            <div className="w-3 h-3 rounded-full bg-green-500/70" />
+            <span className="ml-2 text-xs text-white/25 font-mono">claim-upload.tsx</span>
           </div>
 
-          {/* Description */}
-          <div>
-            <label className="block text-sm font-medium text-white/70 mb-2">
-              Description
-            </label>
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Describe the incident in detail — what happened, when, the extent of damage, etc."
-              rows={5}
-              maxLength={5000}
-              className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white placeholder:text-white/25 outline-none focus:border-[#3B82F6]/50 focus:ring-2 focus:ring-[#3B82F6]/20 transition-all resize-none"
-            />
-            <p className="mt-1.5 text-xs text-white/25 text-right">{description.length}/5000</p>
-          </div>
+          <div className="p-6 space-y-6">
 
-          {/* Image Upload */}
-          <div>
-            <label className="block text-sm font-medium text-white/70 mb-2">
-              Claim Images
-              <span className="ml-2 text-xs text-white/30 font-normal">
-                ({images.length}/{MAX_IMAGES})
-              </span>
-            </label>
-
-            {/* Drop zone */}
-            <div
-              onDragOver={(e) => {
-                e.preventDefault();
-                setDragOver(true);
-              }}
-              onDragLeave={() => setDragOver(false)}
-              onDrop={handleDrop}
-              onClick={() => fileInputRef.current?.click()}
-              className={`relative cursor-pointer rounded-xl border-2 border-dashed p-8 text-center transition-all ${
-                dragOver
-                  ? "border-[#3B82F6]/60 bg-[#3B82F6]/5"
-                  : "border-white/10 bg-white/[0.02] hover:border-white/20 hover:bg-white/[0.04]"
-              }`}
-            >
+            {/* ── Claim Title ── */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-sm text-white/60">Claim Title</label>
+                <span className="text-xs text-white/25">{title.length}/200</span>
+              </div>
               <input
-                ref={fileInputRef}
-                type="file"
-                accept={ACCEPTED_IMAGE_TYPES.join(",")}
-                multiple
-                title="Upload claim images"
+                type="text"
+                value={title}
                 onChange={(e) => {
-                  if (e.target.files) addImages(e.target.files);
-                  e.target.value = "";
+                  // Strip digits and non-allowed characters on the fly
+                  setTitle(e.target.value);
                 }}
-                className="hidden"
+                onBlur={() => setTouchedTitle(true)}
+                placeholder="e.g. Water damage in kitchen"
+                maxLength={200}
+                className={`w-full rounded-lg border bg-white/5 px-4 py-2.5 text-sm text-white placeholder:text-white/25 outline-none focus:ring-2 transition-all ${
+                  touchedTitle && (titleMissing || titleError)
+                    ? "border-red-500/50 focus:border-red-500/60 focus:ring-red-500/20"
+                    : touchedTitle && title.trim() && !titleError
+                    ? "border-emerald-500/40 focus:border-emerald-500/50 focus:ring-emerald-500/20"
+                    : "border-white/10 focus:border-[#3B82F6]/50 focus:ring-[#3B82F6]/20"
+                }`}
               />
-              <div className="flex flex-col items-center gap-3">
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#3B82F6]/10 ring-1 ring-[#3B82F6]/25">
-                  <svg className="h-6 w-6 text-[#3B82F6]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              {touchedTitle && titleMissing && (
+                <p className="mt-1.5 flex items-center gap-1.5 text-xs text-red-400">
+                  <svg className="h-3 w-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   </svg>
-                </div>
-                <div>
-                  <p className="text-sm text-white/60">
-                    <span className="text-[#3B82F6] font-medium">Click to upload</span>{" "}
-                    or drag & drop
+                  Claim title is required.
+                </p>
+              )}
+              {touchedTitle && !titleMissing && titleError && (
+                <p className="mt-1.5 flex items-center gap-1.5 text-xs text-red-400">
+                  <svg className="h-3 w-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                  {titleError}
+                </p>
+              )}
+              {!touchedTitle && (
+                <p className="mt-1.5 text-xs text-white/25">Letters and punctuation only — no numbers or special characters.</p>
+              )}
+            </div>
+
+            {/* ── Description ── */}
+            <div>
+              <label className="block text-sm text-white/60 mb-2">Description</label>
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                onBlur={() => setTouchedDescription(true)}
+                placeholder="Describe the incident in detail — what happened, when, the extent of damage, etc."
+                rows={5}
+                className={`w-full rounded-lg border bg-white/5 px-4 py-2.5 text-sm text-white placeholder:text-white/25 outline-none focus:ring-2 transition-all resize-none ${
+                  descriptionError
+                    ? "border-red-500/50 focus:border-red-500/60 focus:ring-red-500/20"
+                    : touchedDescription && descriptionValid
+                    ? "border-emerald-500/40 focus:border-emerald-500/50 focus:ring-emerald-500/20"
+                    : "border-white/10 focus:border-[#3B82F6]/50 focus:ring-[#3B82F6]/20"
+                }`}
+              />
+              <div className="mt-1 flex items-center">
+                {descriptionError ? (
+                  <p className="flex items-center gap-1.5 text-xs text-red-400">
+                    <svg className="h-3 w-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                    {descriptionError}
                   </p>
-                  <p className="mt-1 text-xs text-white/30">
-                    JPEG, PNG, GIF, or WebP — max 10 MB each
+                ) : (
+                  <p className={`text-xs transition-colors ${
+                    wordCount >= 200 ? "text-emerald-400" : wordCount > 0 ? "text-white/40" : "text-white/25"
+                  }`}>
+                    {wordCount >= 200 ? "✓ Minimum reached" : `${wordCount}/200 words minimum`}
                   </p>
-                </div>
+                )}
               </div>
             </div>
 
-            {/* Image previews */}
-            {images.length > 0 && (
-              <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 gap-3">
-                {images.map((img) => (
-                  <div
-                    key={img.id}
-                    className="group relative aspect-square rounded-xl overflow-hidden border border-white/10 bg-white/5"
-                  >
-                    <Image
-                      src={img.url}
-                      alt={img.file.name}
-                      fill
-                      className="object-cover"
-                    />
-                    {/* Overlay with file name */}
-                    <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent px-2 py-2">
-                      <p className="text-xs text-white/80 truncate">{img.file.name}</p>
-                      <p className="text-[10px] text-white/40">
-                        {(img.file.size / 1024 / 1024).toFixed(1)} MB
-                      </p>
-                    </div>
-                    {/* Remove button */}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        removeImage(img.id);
-                      }}
-                      title="Remove image"
-                      className="absolute top-2 right-2 flex h-7 w-7 items-center justify-center rounded-lg bg-black/60 text-white/60 opacity-0 group-hover:opacity-100 hover:bg-red-500/80 hover:text-white transition-all"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </button>
-                  </div>
-                ))}
+            {/* ── Image Upload ── */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-sm text-white/60">Claim Images</label>
+                <span className="text-xs text-white/25">{images.length}/{MAX_IMAGES}</span>
               </div>
-            )}
-          </div>
 
-          {/* Submit */}
-          <div className="pt-4 border-t border-white/5">
-            <button
-              onClick={handleSubmit}
-              disabled={submitting}
-              className="relative w-full flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#3B82F6] to-[#6366F1] px-6 py-3.5 text-sm font-semibold text-white shadow-lg shadow-[#3B82F6]/20 hover:shadow-[#3B82F6]/30 hover:scale-[1.01] active:scale-[0.99] transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
-            >
-              {submitting ? (
-                <>
-                  <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                  </svg>
-                  Submitting Claim…
-                </>
-              ) : (
-                <>
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                  </svg>
-                  Start Evaluation
-                </>
+              {/* Drop zone */}
+              <div
+                onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+                onDragLeave={() => setDragOver(false)}
+                onDrop={handleDrop}
+                onClick={() => fileInputRef.current?.click()}
+                className={`relative cursor-pointer rounded-xl border-2 border-dashed p-6 text-center transition-all ${
+                  dragOver
+                    ? "border-[#3B82F6]/60 bg-[#3B82F6]/5"
+                    : "border-white/10 bg-white/[0.02] hover:border-[#3B82F6]/30 hover:bg-[#3B82F6]/[0.03]"
+                }`}
+              >
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept={ACCEPTED_IMAGE_TYPES.join(",")}
+                  multiple
+                  title="Upload claim images"
+                  onChange={(e) => { if (e.target.files) addImages(e.target.files); e.target.value = ""; }}
+                  className="hidden"
+                />
+                <div className="flex flex-col items-center gap-2">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#3B82F6]/15 ring-1 ring-[#3B82F6]/25">
+                    <svg className="h-5 w-5 text-[#3B82F6]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="text-sm text-white/50">
+                      <span className="text-[#3B82F6] font-medium">Click to upload</span> or drag & drop
+                    </p>
+                    <p className="mt-0.5 text-xs text-white/25">JPEG, PNG, GIF, WebP · max 10 MB each</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Image rows — compact list style matching the mockup */}
+              {images.length > 0 && (
+                <div className="mt-3 space-y-2">
+                  {images.map((img) => (
+                    <ImageRow key={img.id} img={img} onRemove={() => removeImage(img.id)} />
+                  ))}
+                </div>
               )}
-            </button>
-            <p className="mt-3 text-center text-xs text-white/30">
-              Your claim will be saved and sent to our AI agents for evaluation.
-            </p>
+            </div>
+
+            {/* ── Submit ── */}
+            <div className="pt-2 border-t border-white/5">
+              <button
+                onClick={handleSubmit}
+                disabled={submitting || !formValid}
+                title={!formFilled ? "Please fill in all fields and upload at least one image" : undefined}
+                className={`relative w-full flex items-center justify-center gap-2 rounded-xl px-6 py-3.5 text-sm font-semibold text-white shadow-lg transition-all
+                  ${formValid && !submitting
+                    ? "bg-gradient-to-r from-[#3B82F6] to-[#6366F1] shadow-[#3B82F6]/20 hover:shadow-[#3B82F6]/30 hover:scale-[1.01] active:scale-[0.99] cursor-pointer"
+                    : "bg-gradient-to-r from-[#3B82F6] to-[#6366F1] opacity-40 cursor-not-allowed"
+                  }`}
+              >
+                {submitting ? (
+                  <>
+                    <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                    </svg>
+                    Submitting Claim…
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                    Start Evaluation
+                  </>
+                )}
+              </button>
+
+              {/* Contextual hint under the button */}
+              <p className="mt-2.5 text-center text-sm text-white">
+                {!title.trim()
+                  ? "Title is required before submitting."
+                  : !description.trim()
+                  ? "Description is required before submitting."
+                  : !descriptionValid
+                  ? `Description needs ${200 - wordCount} more word${200 - wordCount === 1 ? "" : "s"}.`
+                  : images.length === 0
+                  ? "At least one image is required before submitting."
+                  : "Your claim will be saved and evaluated by our AI agents."}
+              </p>
+            </div>
+
           </div>
         </div>
       </main>
 
-      {/* Bottom fade */}
       <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-[#030712] to-transparent" />
     </div>
   );
