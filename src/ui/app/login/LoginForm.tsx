@@ -16,11 +16,11 @@ export default function LoginForm({ action }: LoginFormProps) {
   );
 
   return (
-    <form action={formAction} className="space-y-5">
+    <form action={formAction} className="space-y-4">
       <div>
         <label
           htmlFor="login-email"
-          className="block text-sm font-medium text-white/70"
+          className="block text-sm text-white/60 mb-2"
         >
           Email
         </label>
@@ -29,7 +29,7 @@ export default function LoginForm({ action }: LoginFormProps) {
           name="email"
           type="email"
           required
-          className="mt-1 block w-full rounded-lg border border-white/10 bg-white/5 px-4 py-3 text-white placeholder-white/30 focus:border-blue-500/50 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-colors"
+          className="w-full rounded-lg border border-white/10 bg-white/5 px-4 py-2.5 text-white placeholder:text-white/30 focus:border-[#3B82F6]/50 focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/20 transition-colors"
           placeholder="you@example.com"
         />
       </div>
@@ -37,7 +37,7 @@ export default function LoginForm({ action }: LoginFormProps) {
       <div>
         <label
           htmlFor="login-password"
-          className="block text-sm font-medium text-white/70"
+          className="block text-sm text-white/60 mb-2"
         >
           Password
         </label>
@@ -46,13 +46,13 @@ export default function LoginForm({ action }: LoginFormProps) {
           name="password"
           type="password"
           required
-          className="mt-1 block w-full rounded-lg border border-white/10 bg-white/5 px-4 py-3 text-white placeholder-white/30 focus:border-blue-500/50 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-colors"
+          className="w-full rounded-lg border border-white/10 bg-white/5 px-4 py-2.5 text-white placeholder:text-white/30 focus:border-[#3B82F6]/50 focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/20 transition-colors"
           placeholder="••••••••"
         />
       </div>
 
       {state?.error && (
-        <div className="rounded-lg border border-red-500/20 bg-red-500/10 p-3 text-sm text-red-400">
+        <div className="rounded-lg border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-400">
           {state.error}
         </div>
       )}
@@ -60,9 +60,9 @@ export default function LoginForm({ action }: LoginFormProps) {
       <button
         type="submit"
         disabled={pending}
-        className="w-full rounded-lg bg-gradient-to-r from-blue-600 to-purple-600 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-500/25 hover:from-blue-500 hover:to-purple-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 disabled:cursor-not-allowed disabled:opacity-50 transition-all"
+        className="mt-2 w-full rounded-full bg-white px-4 py-3 text-sm font-medium text-black hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-50 transition-all hover:scale-[1.02] active:scale-[0.98]"
       >
-        {pending ? "Signing in..." : "Sign In"}
+        {pending ? "Signing in…" : "Sign in"}
       </button>
     </form>
   );

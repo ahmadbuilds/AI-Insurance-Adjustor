@@ -117,13 +117,11 @@ export default function ProfilePage() {
     setUploading(true);
     setMessage(null);
 
-    // Show local preview immediately
     const previewUrl = URL.createObjectURL(file);
     setImagePreview(previewUrl);
 
     const supabase = createClient();
 
-    // Delete the previous image if one exists
     if (profile.profile_image_url) {
       const oldPath = extractStoragePath(profile.profile_image_url);
       if (oldPath) {
@@ -131,7 +129,6 @@ export default function ProfilePage() {
       }
     }
 
-    // Upload the new image
     const fileExt = file.name.split(".").pop();
     const filePath = `${profile.id}/avatar.${fileExt}`;
 
@@ -145,12 +142,10 @@ export default function ProfilePage() {
       return;
     }
 
-    // Get the public URL
     const {
       data: { publicUrl },
     } = supabase.storage.from("users_image").getPublicUrl(filePath);
 
-    // Update the user's profile_image_url
     const { error: updateError } = await supabase
       .from("users")
       .update({ profile_image_url: publicUrl })
@@ -160,15 +155,10 @@ export default function ProfilePage() {
       setMessage({ type: "error", text: updateError.message });
       setImagePreview(null);
     } else {
-      // Add cache buster to force browser to load the new image
       const cacheBustedUrl = publicUrl + "?t=" + file.lastModified;
       setProfile({ ...profile, profile_image_url: cacheBustedUrl });
       setImagePreview(null);
-      setMessage({
-        type: "success",
-        text: "Profile image updated successfully!",
-      });
-      // Notify navbar to refresh
+      setMessage({ type: "success", text: "Profile image updated successfully!" });
       window.dispatchEvent(new Event("profile-updated"));
     }
     setUploading(false);
@@ -190,66 +180,85 @@ export default function ProfilePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#030712]">
+      <div className="relative min-h-screen bg-[#030712]">
+        <div className="absolute inset-0 opacity-[0.035] bg-[linear-gradient(rgba(255,255,255,0.5)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.5)_1px,transparent_1px)] bg-[size:60px_60px]" />
         <Navbar />
         <div className="flex h-[calc(100vh-4rem)] items-center justify-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-blue-500/30 border-t-blue-500" />
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#3B82F6]/30 border-t-[#3B82F6]" />
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#030712]">
-      {/* Ambient background glow */}
-      <div className="pointer-events-none fixed inset-0 overflow-hidden">
-        <div className="absolute -top-40 left-1/2 h-[500px] w-[500px] -translate-x-1/2 rounded-full bg-blue-600/8 blur-3xl" />
-        <div className="absolute bottom-0 left-1/4 h-[300px] w-[300px] rounded-full bg-purple-600/8 blur-3xl" />
+    <div className="relative min-h-screen bg-[#030712] overflow-hidden">
+      {/* Grid background */}
+      <div className="absolute inset-0 opacity-[0.035] bg-[linear-gradient(rgba(255,255,255,0.5)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.5)_1px,transparent_1px)] bg-[size:60px_60px]" />
+
+      {/* Radial glows */}
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="absolute -top-32 left-1/2 h-[500px] w-[500px] -translate-x-1/2 rounded-full bg-[#3B82F6]/10 blur-3xl" />
+        <div className="absolute bottom-0 left-1/4 h-[300px] w-[300px] rounded-full bg-[#8B5CF6]/8 blur-3xl" />
       </div>
 
       <Navbar />
-      <main className="relative mx-auto max-w-2xl px-4 py-8 sm:px-6 lg:px-8">
-        <h1 className="mb-8 text-3xl font-bold text-white">
-          Profile Settings
-        </h1>
 
+      <main className="relative mx-auto max-w-2xl px-6 py-12">
+        {/* Page header */}
+        <div className="mb-8">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-white/10 bg-white/5 text-xs text-white/50 mb-5">
+            <span className="inline-block w-1.5 h-1.5 rounded-full bg-[#3B82F6]" />
+            Account Settings
+          </div>
+          <h1 className="text-3xl font-semibold text-white tracking-tight">Profile settings</h1>
+          <p className="mt-2 text-sm text-white/40">Manage your personal details and avatar.</p>
+        </div>
+
+        {/* Alert */}
         {message && (
-          <div
-            className={`mb-6 rounded-lg border p-4 text-sm ${
-              message.type === "success"
-                ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-400"
-                : "border-red-500/20 bg-red-500/10 text-red-400"
-            }`}
-          >
+          <div className={`mb-6 flex items-start gap-3 rounded-xl border p-4 text-sm ${
+            message.type === "success"
+              ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-300"
+              : "border-red-500/20 bg-red-500/10 text-red-400"
+          }`}>
+            <svg className="mt-0.5 h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              {message.type === "success"
+                ? <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                : <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              }
+            </svg>
             {message.text}
           </div>
         )}
 
-        {/* Profile Image Section */}
-        <div className="mb-6 rounded-xl border border-white/10 bg-[#0a0e1a] p-6 shadow-lg">
-          <h2 className="mb-4 text-lg font-semibold text-white">
+        {/* Avatar card */}
+        <div className="mb-6 rounded-2xl border border-white/10 bg-gradient-to-br from-white/5 to-white/[0.02] p-6 shadow-lg">
+          <h2 className="mb-5 text-sm font-semibold text-white uppercase tracking-widest text-white/40">
             Profile Photo
           </h2>
           <div className="flex items-center gap-6">
-            <div className="relative">
+            <div className="relative shrink-0">
               {imagePreview || profile?.profile_image_url ? (
                 <Image
                   src={imagePreview || profile!.profile_image_url!}
                   alt="Profile"
-                  width={96}
-                  height={96}
-                  className="h-24 w-24 rounded-full object-cover ring-2 ring-white/10"
+                  width={80}
+                  height={80}
+                  className="h-20 w-20 rounded-full object-cover ring-1 ring-white/10"
                 />
               ) : (
-                <div className="flex h-24 w-24 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-purple-600 text-3xl font-bold text-white ring-2 ring-white/10">
+                <div className="flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-[#3B82F6] to-[#8B5CF6] text-2xl font-semibold text-white ring-1 ring-white/10">
                   {getInitial(profile?.username || username || "U")}
+                </div>
+              )}
+              {uploading && (
+                <div className="absolute inset-0 flex items-center justify-center rounded-full bg-black/60">
+                  <div className="h-5 w-5 animate-spin rounded-full border-2 border-white/30 border-t-white" />
                 </div>
               )}
             </div>
             <div>
-              <label htmlFor="profile-image-upload" className="sr-only">
-                Upload profile photo
-              </label>
+              <label htmlFor="profile-image-upload" className="sr-only">Upload profile photo</label>
               <input
                 id="profile-image-upload"
                 type="file"
@@ -262,28 +271,25 @@ export default function ProfilePage() {
               <button
                 onClick={() => fileInputRef.current?.click()}
                 disabled={uploading}
-                className="rounded-lg bg-gradient-to-r from-blue-600 to-purple-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-500/25 hover:from-blue-500 hover:to-purple-500 disabled:cursor-not-allowed disabled:opacity-50 transition-all"
+                className="rounded-full bg-white px-4 py-2 text-sm font-medium text-black hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-50 transition-all hover:scale-[1.02] active:scale-[0.98]"
               >
-                {uploading ? "Uploading..." : "Upload New Photo"}
+                {uploading ? "Uploading…" : "Upload photo"}
               </button>
               <p className="mt-2 text-xs text-white/30">
-                JPG, PNG, GIF or WebP. Max 5MB.
+                JPG, PNG, GIF or WebP · Max 5 MB
               </p>
             </div>
           </div>
         </div>
 
-        {/* Profile Info Section */}
-        <div className="rounded-xl border border-white/10 bg-[#0a0e1a] p-6 shadow-lg">
-          <h2 className="mb-4 text-lg font-semibold text-white">
+        {/* Profile info card */}
+        <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-white/5 to-white/[0.02] p-6 shadow-lg">
+          <h2 className="mb-5 text-sm font-semibold uppercase tracking-widest text-white/40">
             Profile Information
           </h2>
           <form onSubmit={handleUpdateProfile} className="space-y-5">
             <div>
-              <label
-                htmlFor="username"
-                className="block text-sm font-medium text-white/70"
-              >
+              <label htmlFor="username" className="block text-sm text-white/60 mb-2">
                 Username
               </label>
               <input
@@ -292,12 +298,12 @@ export default function ProfilePage() {
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 required
-                className="mt-1 block w-full rounded-lg border border-white/10 bg-white/5 px-4 py-3 text-white focus:border-blue-500/50 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-colors"
+                className="w-full rounded-lg border border-white/10 bg-white/5 px-4 py-2.5 text-white focus:border-[#3B82F6]/50 focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/20 transition-colors"
               />
             </div>
 
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-white/70">
+              <label htmlFor="email" className="block text-sm text-white/60 mb-2">
                 Email
               </label>
               <input
@@ -306,37 +312,40 @@ export default function ProfilePage() {
                 value={profile?.email || ""}
                 disabled
                 aria-label="Email"
-                className="mt-1 block w-full rounded-lg border border-white/5 bg-white/3 px-4 py-3 text-white/30 cursor-not-allowed"
+                className="w-full rounded-lg border border-white/[0.05] bg-white/[0.02] px-4 py-2.5 text-white/30 cursor-not-allowed"
               />
-              <p className="mt-1 text-xs text-white/30">
-                Email cannot be changed.
-              </p>
+              <p className="mt-1.5 text-xs text-white/25">Email cannot be changed.</p>
             </div>
 
             <div>
-              <label htmlFor="role" className="block text-sm font-medium text-white/70">
+              <label htmlFor="role" className="block text-sm text-white/60 mb-2">
                 Role
               </label>
-              <input
-                id="role"
-                type="text"
-                value={profile?.role || ""}
-                disabled
-                aria-label="Role"
-                className="mt-1 block w-full rounded-lg border border-white/5 bg-white/3 px-4 py-3 text-white/30 capitalize cursor-not-allowed"
-              />
+              <div className="flex items-center gap-3 rounded-lg border border-white/[0.05] bg-white/[0.02] px-4 py-2.5">
+                <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${
+                  profile?.role === "admin"
+                    ? "bg-[#8B5CF6]/15 text-[#8B5CF6] ring-1 ring-[#8B5CF6]/25"
+                    : "bg-[#3B82F6]/15 text-[#3B82F6] ring-1 ring-[#3B82F6]/25"
+                }`}>
+                  {profile?.role}
+                </span>
+              </div>
             </div>
 
-            <button
-              type="submit"
-              disabled={saving}
-              className="rounded-lg bg-gradient-to-r from-blue-600 to-purple-600 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-500/25 hover:from-blue-500 hover:to-purple-500 disabled:cursor-not-allowed disabled:opacity-50 transition-all"
-            >
-              {saving ? "Saving..." : "Save Changes"}
-            </button>
+            <div className="pt-1">
+              <button
+                type="submit"
+                disabled={saving}
+                className="rounded-full bg-white px-6 py-2.5 text-sm font-medium text-black hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-50 transition-all hover:scale-[1.02] active:scale-[0.98]"
+              >
+                {saving ? "Saving…" : "Save changes"}
+              </button>
+            </div>
           </form>
         </div>
       </main>
+
+      <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-[#030712] to-transparent" />
     </div>
   );
 }
