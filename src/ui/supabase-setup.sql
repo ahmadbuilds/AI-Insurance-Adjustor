@@ -287,3 +287,125 @@ CREATE POLICY "Admins can read all claim images"
     bucket_id = 'claim_images'
     AND public.is_admin()
   );
+
+-- ============================================
+-- 12. Disputes table
+-- Stores disputes filed against rejected claims
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS public.disputes (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  claim_id UUID NOT NULL REFERENCES public.claims(id) ON DELETE CASCADE,
+  photo_url TEXT,
+  description TEXT,
+  evidence TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Enable RLS on disputes table
+ALTER TABLE public.disputes ENABLE ROW LEVEL SECURITY;
+
+-- Users can view their own disputes
+CREATE POLICY "Users can view own disputes"
+  ON public.disputes FOR SELECT
+  USING (auth.uid() = user_id);
+
+-- Users can insert their own disputes
+CREATE POLICY "Users can insert own disputes"
+  ON public.disputes FOR INSERT
+  WITH CHECK (auth.uid() = user_id);
+
+-- Users can update their own disputes (optional, for future UI)
+CREATE POLICY "Users can update own disputes"
+  ON public.disputes FOR UPDATE
+  USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
+
+-- Admins can view all disputes
+CREATE POLICY "Admins can view all disputes"
+  ON public.disputes FOR SELECT
+  USING (public.is_admin());
+
+-- Auto-update updated_at on disputes
+CREATE TRIGGER on_disputes_updated
+  BEFORE UPDATE ON public.disputes
+  FOR EACH ROW
+  EXECUTE FUNCTION public.handle_updated_at();
+
+-- ============================================
+-- 13. Storage RLS policies for dispute_images bucket
+-- Make sure the bucket "dispute_images" exists in Supabase Storage dashboard
+-- ============================================
+
+-- Users can upload dispute attachments into their own folder
+CREATE POLICY "Users can upload dispute attachments"
+  ON storage.objects FOR INSERT
+  WITH CHECK (
+    bucket_id = 'dispute_images'
+    AND (storage.foldername(name))[1] = auth.uid()::text
+  );
+
+-- Users can read their own dispute attachments
+CREATE POLICY "Users can read own dispute attachments"
+  ON storage.objects FOR SELECT
+  USING (
+    bucket_id = 'dispute_images'
+    AND (storage.foldername(name))[1] = auth.uid()::text
+  );
+
+-- Users can delete their own dispute attachments
+CREATE POLICY "Users can delete own dispute attachments"
+  ON storage.objects FOR DELETE
+  USING (
+    bucket_id = 'dispute_images'
+    AND (storage.foldername(name))[1] = auth.uid()::text
+  );
+
+-- Admins can read all dispute attachments
+CREATE POLICY "Admins can read all dispute attachments"
+  ON storage.objects FOR SELECT
+  USING (
+    bucket_id = 'dispute_images'
+    AND public.is_admin()
+  );
+
+-- ============================================
+-- 14. Storage RLS policies for dispute_images bucket
+-- Make sure the bucket "dispute_images" exists in Supabase Storage dashboard
+-- Used for image uploads related to disputes
+-- ============================================
+
+-- Users can upload dispute images into their own folder
+CREATE POLICY "Users can upload dispute images"
+  ON storage.objects FOR INSERT
+  WITH CHECK (
+    bucket_id = 'dispute_images'
+    AND (storage.foldername(name))[1] = auth.uid()::text
+  );
+
+-- Users can read their own dispute images
+CREATE POLICY "Users can read own dispute images"
+  ON storage.objects FOR SELECT
+  USING (
+    bucket_id = 'dispute_images'
+    AND (storage.foldername(name))[1] = auth.uid()::text
+  );
+
+-- Users can delete their own dispute images
+CREATE POLICY "Users can delete own dispute images"
+  ON storage.objects FOR DELETE
+  USING (
+    bucket_id = 'dispute_images'
+    AND (storage.foldername(name))[1] = auth.uid()::text
+  );
+
+-- Admins can read all dispute images
+CREATE POLICY "Admins can read all dispute images"
+  ON storage.objects FOR SELECT
+  USING (
+    bucket_id = 'dispute_images'
+    AND public.is_admin()
+  );
+
