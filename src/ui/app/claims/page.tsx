@@ -274,7 +274,7 @@ export default function ClaimsPage() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
             <p className="text-sm text-red-300 flex-1">{error}</p>
-            <button onClick={() => setError(null)} className="text-red-400/50 hover:text-red-300 transition-colors">
+            <button onClick={() => setError(null)} className="text-red-400/50 hover:text-red-300 transition-colors" title="Dismiss error">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
@@ -287,7 +287,7 @@ export default function ClaimsPage() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
             </svg>
             <p className="text-sm text-emerald-300 flex-1">{success}</p>
-            <button onClick={() => setSuccess(null)} className="text-emerald-400/50 hover:text-emerald-300 transition-colors">
+            <button onClick={() => setSuccess(null)} className="text-emerald-400/50 hover:text-emerald-300 transition-colors" title="Dismiss success">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
