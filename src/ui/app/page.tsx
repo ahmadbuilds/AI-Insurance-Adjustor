@@ -42,6 +42,11 @@ interface Feature {
 
 // ─── Feature mockup components ────────────────────────────────────────────────
 function UploadMockup() {
+  const [animationKey, setAnimationKey] = useState(0);
+  useEffect(() => {
+    const interval = setInterval(() => setAnimationKey(k => k + 1), 5000);
+    return () => clearInterval(interval);
+  }, []);
   return (
     <div className="relative w-full h-full bg-[#0a0e1a] rounded-xl border border-white/10 overflow-hidden p-6 flex flex-col gap-4">
       <div className="flex items-center gap-2 mb-2">
@@ -65,6 +70,7 @@ function UploadMockup() {
             <div className="text-xs text-white/70 truncate">{f}</div>
             <div className="w-full h-1 bg-white/10 rounded mt-1 overflow-hidden">
               <motion.div
+                key={animationKey}
                 className="h-full bg-gradient-to-r from-[#3B82F6] to-[#8B5CF6] rounded"
                 initial={{ width: "0%" }}
                 animate={{ width: "100%" }}
@@ -282,6 +288,11 @@ function PolicyCheckMockup() {
 }
 
 function AIMockup() {
+  const [animationKey, setAnimationKey] = useState(0);
+  useEffect(() => {
+    const interval = setInterval(() => setAnimationKey(k => k + 1), 5000);
+    return () => clearInterval(interval);
+  }, []);
   return (
     <div className="relative w-full h-full bg-[#0a0e1a] rounded-xl border border-white/10 overflow-hidden p-6 flex flex-col gap-4">
       <div className="flex items-center gap-2 mb-2">
@@ -305,6 +316,7 @@ function AIMockup() {
         </div>
         <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden">
           <motion.div
+            key={animationKey}
             className="h-full bg-gradient-to-r from-emerald-500 to-emerald-400 rounded-full"
             initial={{ width: "0%" }}
             animate={{ width: "94%" }}
