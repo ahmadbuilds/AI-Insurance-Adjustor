@@ -1,4 +1,7 @@
-from infrastructure.redis.redis_config import get_redis_client
+try:
+    from src.infrastructure.redis.redis_config import get_redis_client
+except ModuleNotFoundError:
+    from infrastructure.redis.redis_config import get_redis_client
 import json
 redis=get_redis_client()
 
