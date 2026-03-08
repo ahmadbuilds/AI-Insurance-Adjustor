@@ -185,7 +185,7 @@ export default function ClaimsPage() {
       } = await supabase.auth.getSession();
 
       if (session?.access_token) {
-        const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
+        const backendUrl = process.env.NEXT_PUBLIC_BACKEND_API_URL || "http://localhost:8000";
 
         await fetch(
           `${backendUrl}/publish_event?event_channel=claim_evaluation_${claim.id}`,

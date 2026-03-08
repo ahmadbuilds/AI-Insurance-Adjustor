@@ -1,5 +1,9 @@
 from supabase import create_client,Client
-from config import supabase_key,supabase_url
+
+try:
+    from src.config import supabase_key,supabase_url
+except ModuleNotFoundError:
+    from config import supabase_key,supabase_url
 
 client:Client=create_client(supabase_url,supabase_key)
 
