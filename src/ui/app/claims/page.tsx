@@ -9,63 +9,8 @@ const MAX_IMAGES = 10;
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp"];
 
-// Title may only contain letters, spaces, hyphens, apostrophes, and common punctuation — no digits or symbols
-const TITLE_REGEX = /^[a-zA-Z\s\-',.!?()&]+$/;
-
-function validateTitle(v: string): string | null {
-  if (!v.trim()) return null; // presence handled separately
-  if (!TITLE_REGEX.test(v)) return "Title may only contain letters and punctuation — no numbers or special characters.";
-  return null;
-}
-
-interface ImageFile {
-  file: File;
-  url: string;
-  id: string;
-}
-
-// Compact row-style image item — matches claim-upload.tsx mockup aesthetic
-function ImageRow({ img, onRemove }: { img: ImageFile; onRemove: () => void }) {
-  const sizeMB = (img.file.size / 1024 / 1024).toFixed(1);
-
-  return (
-    <div className="flex items-center gap-3 rounded-lg bg-white/5 px-3 py-2.5 border border-white/8 group">
-      {/* Small thumbnail */}
-      <div className="relative h-9 w-9 shrink-0 rounded-md overflow-hidden bg-[#3B82F6]/20 ring-1 ring-[#3B82F6]/30">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={img.url} alt={img.file.name} className="h-full w-full object-cover" />
-      </div>
-
-      {/* Name + size + progress bar */}
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center justify-between mb-1">
-          <p className="text-xs text-white/70 truncate pr-2">{img.file.name}</p>
-          <span className="text-[10px] text-white/35 shrink-0">{sizeMB} MB</span>
-        </div>
-        {/* Static "uploaded" bar */}
-        <div className="w-full h-1 rounded-full bg-white/10 overflow-hidden">
-          <div className="h-full w-full rounded-full bg-gradient-to-r from-[#3B82F6] to-[#8B5CF6]" />
-        </div>
-      </div>
-
-      {/* Check + remove */}
-      <div className="flex items-center gap-1.5 shrink-0">
-        <svg className="h-4 w-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-        <button
-          onClick={onRemove}
-          title="Remove image"
-          className="flex h-5 w-5 items-center justify-center rounded text-white/25 hover:text-red-400 hover:bg-red-500/10 transition-all opacity-0 group-hover:opacity-100"
-        >
-          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
-      </div>
-    </div>
-  );
-}
+import { validateTitle, type ImageFile } from "./utils/claim-helpers";
+import { ImageRow } from "./components/ImageRow";
 
 export default function ClaimsPage() {
   const router = useRouter();
@@ -231,7 +176,7 @@ export default function ClaimsPage() {
   return (
     <div className="relative min-h-screen bg-[#030712] overflow-hidden">
       {/* Grid */}
-      <div className="absolute inset-0 opacity-[0.035] bg-[linear-gradient(rgba(255,255,255,0.5)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.5)_1px,transparent_1px)] bg-[size:60px_60px]" />
+      <div className="absolute inset-0 opacity-[0.035] bg-[linear-gradient(rgba(255,255,255,0.5)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.5)_1px,transparent_1px)] bg-size-[60px_60px]" />
       {/* Glows */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
         <div className="absolute -top-32 left-1/2 h-[600px] w-[600px] -translate-x-1/2 rounded-full bg-[#3B82F6]/10 blur-3xl" />
@@ -296,7 +241,7 @@ export default function ClaimsPage() {
         )}
 
         {/* ── Card shell (matches mockup window chrome) ── */}
-        <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-white/5 to-white/[0.02] overflow-hidden shadow-2xl shadow-black/40">
+        <div className="rounded-2xl border border-white/10 bg-linear-to-br from-white/5 to-white/2 overflow-hidden shadow-2xl shadow-black/40">
 
           <div className="p-6 space-y-6">
 
@@ -396,7 +341,7 @@ export default function ClaimsPage() {
                 className={`relative cursor-pointer rounded-xl border-2 border-dashed p-6 text-center transition-all ${
                   dragOver
                     ? "border-[#3B82F6]/60 bg-[#3B82F6]/5"
-                    : "border-white/10 bg-white/[0.02] hover:border-[#3B82F6]/30 hover:bg-[#3B82F6]/[0.03]"
+                    : "border-white/10 bg-white/2 hover:border-[#3B82F6]/30 hover:bg-[#3B82F6]/3"
                 }`}
               >
                 <input
@@ -441,8 +386,8 @@ export default function ClaimsPage() {
                 title={!formFilled ? "Please fill in all fields and upload at least one image" : undefined}
                 className={`relative w-full flex items-center justify-center gap-2 rounded-xl px-6 py-3.5 text-sm font-semibold text-white shadow-lg transition-all
                   ${formValid && !submitting
-                    ? "bg-gradient-to-r from-[#3B82F6] to-[#6366F1] shadow-[#3B82F6]/20 hover:shadow-[#3B82F6]/30 hover:scale-[1.01] active:scale-[0.99] cursor-pointer"
-                    : "bg-gradient-to-r from-[#3B82F6] to-[#6366F1] opacity-40 cursor-not-allowed"
+                    ? "bg-linear-to-r from-[#3B82F6] to-[#6366F1] shadow-[#3B82F6]/20 hover:shadow-[#3B82F6]/30 hover:scale-[1.01] active:scale-[0.99] cursor-pointer"
+                    : "bg-linear-to-r from-[#3B82F6] to-[#6366F1] opacity-40 cursor-not-allowed"
                   }`}
               >
                 {submitting ? (
@@ -481,7 +426,7 @@ export default function ClaimsPage() {
         </div>
       </main>
 
-      <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-[#030712] to-transparent" />
+      <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-32 bg-linear-to-t from-[#030712] to-transparent" />
     </div>
   );
 }

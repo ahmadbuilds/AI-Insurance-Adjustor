@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
-import { PDFParse, VerbosityLevel } from "pdf-parse"; // use class-based parser
+import pdfParse from "pdf-parse"; // use class-based parser
 import mammoth from "mammoth";
 
 export const runtime = "nodejs";
@@ -14,9 +14,7 @@ async function extractTextFromFile(file: File): Promise<string> {
 
   // PDF
   if (type === "application/pdf" || name.endsWith(".pdf")) {
-    // pdf-parse exports a PDFParse class; instantiate with data buffer.
-    const parser = new PDFParse({ data: buffer, verbosity: VerbosityLevel.ERRORS });
-    const result = await parser.getText();
+    const result = await pdfParse(buffer);
     return result.text ?? "";
   }
 
