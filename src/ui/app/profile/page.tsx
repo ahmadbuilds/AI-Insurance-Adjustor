@@ -190,29 +190,35 @@ export default function ProfilePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-[#030712]">
         <Navbar />
         <div className="flex h-[calc(100vh-4rem)] items-center justify-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-indigo-600 border-t-transparent" />
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-blue-500/30 border-t-blue-500" />
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-[#030712]">
+      {/* Ambient background glow */}
+      <div className="pointer-events-none fixed inset-0 overflow-hidden">
+        <div className="absolute -top-40 left-1/2 h-[500px] w-[500px] -translate-x-1/2 rounded-full bg-blue-600/8 blur-3xl" />
+        <div className="absolute bottom-0 left-1/4 h-[300px] w-[300px] rounded-full bg-purple-600/8 blur-3xl" />
+      </div>
+
       <Navbar />
-      <main className="mx-auto max-w-2xl px-4 py-8 sm:px-6 lg:px-8">
-        <h1 className="mb-8 text-3xl font-bold text-gray-900">
+      <main className="relative mx-auto max-w-2xl px-4 py-8 sm:px-6 lg:px-8">
+        <h1 className="mb-8 text-3xl font-bold text-white">
           Profile Settings
         </h1>
 
         {message && (
           <div
-            className={`mb-6 rounded-lg p-4 text-sm ${
+            className={`mb-6 rounded-lg border p-4 text-sm ${
               message.type === "success"
-                ? "bg-green-50 text-green-700"
-                : "bg-red-50 text-red-600"
+                ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-400"
+                : "border-red-500/20 bg-red-500/10 text-red-400"
             }`}
           >
             {message.text}
@@ -220,8 +226,8 @@ export default function ProfilePage() {
         )}
 
         {/* Profile Image Section */}
-        <div className="mb-8 rounded-xl bg-white p-6 shadow-sm ring-1 ring-gray-200">
-          <h2 className="mb-4 text-lg font-semibold text-gray-900">
+        <div className="mb-6 rounded-xl border border-white/10 bg-[#0a0e1a] p-6 shadow-lg">
+          <h2 className="mb-4 text-lg font-semibold text-white">
             Profile Photo
           </h2>
           <div className="flex items-center gap-6">
@@ -232,10 +238,10 @@ export default function ProfilePage() {
                   alt="Profile"
                   width={96}
                   height={96}
-                  className="h-24 w-24 rounded-full object-cover ring-2 ring-gray-200"
+                  className="h-24 w-24 rounded-full object-cover ring-2 ring-white/10"
                 />
               ) : (
-                <div className="flex h-24 w-24 items-center justify-center rounded-full bg-indigo-600 text-3xl font-bold text-white ring-2 ring-gray-200">
+                <div className="flex h-24 w-24 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-purple-600 text-3xl font-bold text-white ring-2 ring-white/10">
                   {getInitial(profile?.username || username || "U")}
                 </div>
               )}
@@ -256,11 +262,11 @@ export default function ProfilePage() {
               <button
                 onClick={() => fileInputRef.current?.click()}
                 disabled={uploading}
-                className="rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50"
+                className="rounded-lg bg-gradient-to-r from-blue-600 to-purple-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-500/25 hover:from-blue-500 hover:to-purple-500 disabled:cursor-not-allowed disabled:opacity-50 transition-all"
               >
                 {uploading ? "Uploading..." : "Upload New Photo"}
               </button>
-              <p className="mt-2 text-xs text-gray-500">
+              <p className="mt-2 text-xs text-white/30">
                 JPG, PNG, GIF or WebP. Max 5MB.
               </p>
             </div>
@@ -268,15 +274,15 @@ export default function ProfilePage() {
         </div>
 
         {/* Profile Info Section */}
-        <div className="rounded-xl bg-white p-6 shadow-sm ring-1 ring-gray-200">
-          <h2 className="mb-4 text-lg font-semibold text-gray-900">
+        <div className="rounded-xl border border-white/10 bg-[#0a0e1a] p-6 shadow-lg">
+          <h2 className="mb-4 text-lg font-semibold text-white">
             Profile Information
           </h2>
           <form onSubmit={handleUpdateProfile} className="space-y-5">
             <div>
               <label
                 htmlFor="username"
-                className="block text-sm font-medium text-gray-700"
+                className="block text-sm font-medium text-white/70"
               >
                 Username
               </label>
@@ -286,12 +292,12 @@ export default function ProfilePage() {
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 required
-                className="mt-1 block w-full rounded-lg border border-gray-300 px-4 py-3 text-gray-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                className="mt-1 block w-full rounded-lg border border-white/10 bg-white/5 px-4 py-3 text-white focus:border-blue-500/50 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-colors"
               />
             </div>
 
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="email" className="block text-sm font-medium text-white/70">
                 Email
               </label>
               <input
@@ -300,15 +306,15 @@ export default function ProfilePage() {
                 value={profile?.email || ""}
                 disabled
                 aria-label="Email"
-                className="mt-1 block w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-gray-500"
+                className="mt-1 block w-full rounded-lg border border-white/5 bg-white/3 px-4 py-3 text-white/30 cursor-not-allowed"
               />
-              <p className="mt-1 text-xs text-gray-400">
+              <p className="mt-1 text-xs text-white/30">
                 Email cannot be changed.
               </p>
             </div>
 
             <div>
-              <label htmlFor="role" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="role" className="block text-sm font-medium text-white/70">
                 Role
               </label>
               <input
@@ -317,14 +323,14 @@ export default function ProfilePage() {
                 value={profile?.role || ""}
                 disabled
                 aria-label="Role"
-                className="mt-1 block w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-gray-500 capitalize"
+                className="mt-1 block w-full rounded-lg border border-white/5 bg-white/3 px-4 py-3 text-white/30 capitalize cursor-not-allowed"
               />
             </div>
 
             <button
               type="submit"
               disabled={saving}
-              className="rounded-lg bg-indigo-600 px-6 py-3 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-lg bg-gradient-to-r from-blue-600 to-purple-600 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-500/25 hover:from-blue-500 hover:to-purple-500 disabled:cursor-not-allowed disabled:opacity-50 transition-all"
             >
               {saving ? "Saving..." : "Save Changes"}
             </button>

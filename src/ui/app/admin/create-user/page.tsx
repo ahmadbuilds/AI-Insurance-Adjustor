@@ -68,38 +68,44 @@ export default function CreateUserPage() {
 
   if (checking || !authorized) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-[#030712]">
         <Navbar />
         <div className="flex h-[calc(100vh-4rem)] items-center justify-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-indigo-600 border-t-transparent" />
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-blue-500/30 border-t-blue-500" />
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-[#030712]">
+      {/* Ambient background glow */}
+      <div className="pointer-events-none fixed inset-0 overflow-hidden">
+        <div className="absolute -top-40 left-1/2 h-[500px] w-[500px] -translate-x-1/2 rounded-full bg-blue-600/8 blur-3xl" />
+        <div className="absolute bottom-0 right-1/4 h-[300px] w-[300px] rounded-full bg-purple-600/8 blur-3xl" />
+      </div>
+
       <Navbar />
-      <main className="mx-auto max-w-lg px-4 py-8 sm:px-6 lg:px-8">
-        <div className="rounded-2xl bg-white p-8 shadow-sm ring-1 ring-gray-200">
+      <main className="relative mx-auto max-w-lg px-4 py-8 sm:px-6 lg:px-8">
+        <div className="rounded-2xl border border-white/10 bg-[#0a0e1a] p-8 shadow-2xl shadow-black/50">
           <div className="mb-8">
-            <h1 className="text-3xl font-bold text-gray-900">
+            <h1 className="text-3xl font-bold text-white">
               Create New User
             </h1>
-            <p className="mt-2 text-gray-600">
+            <p className="mt-2 text-white/50">
               Add a new user to the platform. They will receive a confirmation
               email with their login credentials.
             </p>
           </div>
 
           {success && (
-            <div className="mb-6 rounded-lg bg-green-50 p-4 text-sm text-green-700">
+            <div className="mb-6 rounded-lg border border-emerald-500/20 bg-emerald-500/10 p-4 text-sm text-emerald-400">
               {success}
             </div>
           )}
 
           {error && (
-            <div className="mb-6 rounded-lg bg-red-50 p-4 text-sm text-red-600">
+            <div className="mb-6 rounded-lg border border-red-500/20 bg-red-500/10 p-4 text-sm text-red-400">
               {error}
             </div>
           )}
@@ -108,7 +114,7 @@ export default function CreateUserPage() {
             <div>
               <label
                 htmlFor="username"
-                className="block text-sm font-medium text-gray-700"
+                className="block text-sm font-medium text-white/70"
               >
                 Username
               </label>
@@ -118,7 +124,7 @@ export default function CreateUserPage() {
                 type="text"
                 required
                 autoComplete="off"
-                className="mt-1 block w-full rounded-lg border border-gray-300 px-4 py-3 text-gray-900 placeholder-gray-400 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                className="mt-1 block w-full rounded-lg border border-white/10 bg-white/5 px-4 py-3 text-white placeholder-white/30 focus:border-blue-500/50 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-colors"
                 placeholder="johndoe"
               />
             </div>
@@ -126,7 +132,7 @@ export default function CreateUserPage() {
             <div>
               <label
                 htmlFor="email"
-                className="block text-sm font-medium text-gray-700"
+                className="block text-sm font-medium text-white/70"
               >
                 Email
               </label>
@@ -136,7 +142,7 @@ export default function CreateUserPage() {
                 type="email"
                 required
                 autoComplete="off"
-                className="mt-1 block w-full rounded-lg border border-gray-300 px-4 py-3 text-gray-900 placeholder-gray-400 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                className="mt-1 block w-full rounded-lg border border-white/10 bg-white/5 px-4 py-3 text-white placeholder-white/30 focus:border-blue-500/50 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-colors"
                 placeholder="user@example.com"
               />
             </div>
@@ -144,7 +150,7 @@ export default function CreateUserPage() {
             <div>
               <label
                 htmlFor="password"
-                className="block text-sm font-medium text-gray-700"
+                className="block text-sm font-medium text-white/70"
               >
                 Password
               </label>
@@ -155,7 +161,7 @@ export default function CreateUserPage() {
                 required
                 minLength={6}
                 autoComplete="new-password"
-                className="mt-1 block w-full rounded-lg border border-gray-300 px-4 py-3 text-gray-900 placeholder-gray-400 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                className="mt-1 block w-full rounded-lg border border-white/10 bg-white/5 px-4 py-3 text-white placeholder-white/30 focus:border-blue-500/50 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-colors"
                 placeholder="••••••••"
               />
             </div>
@@ -163,7 +169,7 @@ export default function CreateUserPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full rounded-lg bg-indigo-600 px-4 py-3 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 disabled:cursor-not-allowed disabled:opacity-50"
+              className="w-full rounded-lg bg-gradient-to-r from-blue-600 to-purple-600 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-500/25 hover:from-blue-500 hover:to-purple-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 disabled:cursor-not-allowed disabled:opacity-50 transition-all"
             >
               {loading ? "Creating user..." : "Create New User"}
             </button>
