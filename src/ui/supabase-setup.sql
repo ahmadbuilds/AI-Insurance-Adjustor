@@ -155,3 +155,135 @@ ALTER TABLE public.email_confirmations ENABLE ROW LEVEL SECURITY;
 
 -- Only the service role (server-side) should access this table.
 -- No client-side policies needed — the API route uses the service role key.
+
+-- ============================================
+-- 9. Claims table
+-- Stores insurance claims submitted by users for AI evaluation
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS public.claims (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  title TEXT NOT NULL,
+  description TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'under_review', 'approved', 'rejected')),
+  ai_verdict TEXT,           -- AI agent's reasoning / verdict explanation
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Enable RLS on claims table
+ALTER TABLE public.claims ENABLE ROW LEVEL SECURITY;
+
+-- Users can view their own claims
+CREATE POLICY "Users can view own claims"
+  ON public.claims FOR SELECT
+  USING (auth.uid() = user_id);
+
+-- Users can insert their own claims
+CREATE POLICY "Users can insert own claims"
+  ON public.claims FOR INSERT
+  WITH CHECK (auth.uid() = user_id);
+
+-- Users can update their own claims (only while pending)
+CREATE POLICY "Users can update own pending claims"
+  ON public.claims FOR UPDATE
+  USING (auth.uid() = user_id AND status = 'pending')
+  WITH CHECK (auth.uid() = user_id AND status = 'pending');
+
+-- Users can delete their own claims (only while pending)
+CREATE POLICY "Users can delete own pending claims"
+  ON public.claims FOR DELETE
+  USING (auth.uid() = user_id AND status = 'pending');
+
+-- Admins can view all claims
+CREATE POLICY "Admins can view all claims"
+  ON public.claims FOR SELECT
+  USING (public.is_admin());
+
+-- Admins can update any claim (for status changes)
+CREATE POLICY "Admins can update all claims"
+  ON public.claims FOR UPDATE
+  USING (public.is_admin());
+
+-- Auto-update updated_at on claims
+CREATE TRIGGER on_claims_updated
+  BEFORE UPDATE ON public.claims
+  FOR EACH ROW
+  EXECUTE FUNCTION public.handle_updated_at();
+
+-- ============================================
+-- 10. Claim images table
+-- Tracks images uploaded to the claim_images storage bucket
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS public.claim_images (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  claim_id UUID NOT NULL REFERENCES public.claims(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  storage_path TEXT NOT NULL,       -- path inside claim_images bucket
+  file_name TEXT NOT NULL,
+  file_size BIGINT,
+  mime_type TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Enable RLS on claim_images table
+ALTER TABLE public.claim_images ENABLE ROW LEVEL SECURITY;
+
+-- Users can view their own claim images
+CREATE POLICY "Users can view own claim images"
+  ON public.claim_images FOR SELECT
+  USING (auth.uid() = user_id);
+
+-- Users can insert their own claim images
+CREATE POLICY "Users can insert own claim images"
+  ON public.claim_images FOR INSERT
+  WITH CHECK (auth.uid() = user_id);
+
+-- Users can delete their own claim images
+CREATE POLICY "Users can delete own claim images"
+  ON public.claim_images FOR DELETE
+  USING (auth.uid() = user_id);
+
+-- Admins can view all claim images
+CREATE POLICY "Admins can view all claim images"
+  ON public.claim_images FOR SELECT
+  USING (public.is_admin());
+
+-- ============================================
+-- 11. Storage RLS policies for claim_images bucket
+-- Make sure the bucket "claim_images" exists in Supabase Storage dashboard
+-- ============================================
+
+-- Users can upload claim images into their own folder
+CREATE POLICY "Users can upload claim images"
+  ON storage.objects FOR INSERT
+  WITH CHECK (
+    bucket_id = 'claim_images'
+    AND (storage.foldername(name))[1] = auth.uid()::text
+  );
+
+-- Users can view their own claim images
+CREATE POLICY "Users can read own claim images"
+  ON storage.objects FOR SELECT
+  USING (
+    bucket_id = 'claim_images'
+    AND (storage.foldername(name))[1] = auth.uid()::text
+  );
+
+-- Users can delete their own claim images
+CREATE POLICY "Users can delete own claim images"
+  ON storage.objects FOR DELETE
+  USING (
+    bucket_id = 'claim_images'
+    AND (storage.foldername(name))[1] = auth.uid()::text
+  );
+
+-- Admins can read all claim images
+CREATE POLICY "Admins can read all claim images"
+  ON storage.objects FOR SELECT
+  USING (
+    bucket_id = 'claim_images'
+    AND public.is_admin()
+  );

@@ -158,6 +158,7 @@ export async function deleteUserByAdmin(userId: string) {
   }
 
   const adminSupabase = createSupabaseClient(supabaseUrl, serviceRoleKey);
+
   const cleanupUserImages = async () => {
     const { data: userFiles, error: listError } = await adminSupabase
       .storage
@@ -183,6 +184,51 @@ export async function deleteUserByAdmin(userId: string) {
     return { error: null as string | null };
   };
 
+  const cleanupClaimImages = async () => {
+    // List all claim image files under the user's folder in claim_images bucket
+    const { data: claimFiles, error: listError } = await adminSupabase
+      .storage
+      .from("claim_images")
+      .list(userId, { limit: 1000, offset: 0 });
+
+    if (listError) {
+      return { error: listError.message };
+    }
+
+    // claim_images are stored as userId/claimId/filename — we need to recurse into subfolders
+    if (claimFiles && claimFiles.length > 0) {
+      const allPaths: string[] = [];
+      for (const item of claimFiles) {
+        if (item.id === null) {
+          // It's a folder (claim ID folder) — list its contents
+          const { data: subFiles } = await adminSupabase
+            .storage
+            .from("claim_images")
+            .list(`${userId}/${item.name}`, { limit: 1000, offset: 0 });
+          if (subFiles) {
+            for (const sf of subFiles) {
+              allPaths.push(`${userId}/${item.name}/${sf.name}`);
+            }
+          }
+        } else {
+          allPaths.push(`${userId}/${item.name}`);
+        }
+      }
+
+      if (allPaths.length > 0) {
+        const { error: removeError } = await adminSupabase
+          .storage
+          .from("claim_images")
+          .remove(allPaths);
+        if (removeError) {
+          return { error: removeError.message };
+        }
+      }
+    }
+
+    return { error: null as string | null };
+  };
+
   const { error } = await adminSupabase.auth.admin.deleteUser(userId);
 
   if (!error) {
@@ -190,6 +236,13 @@ export async function deleteUserByAdmin(userId: string) {
     if (imageCleanup.error) {
       return {
         error: `User deleted, but profile image cleanup failed: ${imageCleanup.error}`,
+      };
+    }
+
+    const claimImageCleanup = await cleanupClaimImages();
+    if (claimImageCleanup.error) {
+      return {
+        error: `User deleted, but claim image cleanup failed: ${claimImageCleanup.error}`,
       };
     }
 
@@ -212,6 +265,13 @@ export async function deleteUserByAdmin(userId: string) {
     if (imageCleanup.error) {
       return {
         error: `User auth was deleted, but profile image cleanup failed: ${imageCleanup.error}`,
+      };
+    }
+
+    const claimImageCleanup = await cleanupClaimImages();
+    if (claimImageCleanup.error) {
+      return {
+        error: `User auth was deleted, but claim image cleanup failed: ${claimImageCleanup.error}`,
       };
     }
 

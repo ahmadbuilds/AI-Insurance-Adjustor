@@ -1,4 +1,4 @@
-from infrastructure.redis.redis_client import get_redis_client
+from infrastructure.redis.redis_config import get_redis_client
 import json
 redis=get_redis_client()
 
@@ -6,6 +6,7 @@ redis=get_redis_client()
 def publish_event(channel:str,event:dict)->str:
     try:
         redis.publish(channel,json.dumps(event))
-        return "Event published successfully"
+        return True
     except Exception as e:
-        return f"Error publishing event: {str(e)}"
+        print(f"Error publishing event: {str(e)}")
+        return False
