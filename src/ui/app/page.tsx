@@ -1097,7 +1097,7 @@ function ContactSection() {
                     <a href="mailto:l233080@lhr.nu.edu.pk" className="text-[#3B82F6] hover:text-[#3B82F6]/80 block">
                       l233080@lhr.nu.edu.pk
                     </a>
-                    <span className="text-white/70 block">Abdullah Lafit</span>
+                    <span className="text-white/70 block">Abdullah Latif</span>
                   </div>
                 </div>
               </fieldset>
