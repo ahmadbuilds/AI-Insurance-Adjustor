@@ -15,7 +15,8 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image"; 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import Lenis from "lenis";
 import { useMouseParallax } from "@/hooks/useMouseParallax";
 import { Reveal } from "@/components/landing/Reveal";
 import { LandingNavbar as Navbar } from "@/components/landing/LandingNavbar";
@@ -501,8 +502,41 @@ function FeaturesIntro() {
 
 //Root page 
 export default function Home() {
+  useEffect(() => {
+    const lenis = new Lenis({
+      duration: 1.2,
+      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+      orientation: 'vertical',
+      gestureOrientation: 'vertical',
+      smoothWheel: true,
+      wheelMultiplier: 1,
+      touchMultiplier: 2,
+    });
+
+    let rafId: number;
+
+    function raf(time: number) {
+      lenis.raf(time);
+      rafId = requestAnimationFrame(raf);
+    }
+
+    rafId = requestAnimationFrame(raf);
+
+    return () => {
+      cancelAnimationFrame(rafId);
+      lenis.destroy();
+    };
+  }, []);
+
   return (
     <div className="bg-[#030712] min-h-screen">
+      <style dangerouslySetInnerHTML={{ __html: `
+        html.lenis, html.lenis body { height: auto; }
+        .lenis.lenis-smooth { scroll-behavior: auto !important; }
+        .lenis.lenis-smooth [data-lenis-prevent] { overscroll-behavior: contain; }
+        .lenis.lenis-stopped { overflow: hidden; }
+        .lenis.lenis-scrolling iframe { pointer-events: none; }
+      ` }} />
       <Navbar />
       <Hero />
       <StatsBar />
