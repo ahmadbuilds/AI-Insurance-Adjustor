@@ -5,6 +5,7 @@ import { deleteUserByAdmin } from "@/app/auth/actions";
 import Navbar from "@/components/Navbar";
 import { useRouter } from "next/navigation";
 import { adminService, type ManagedUser } from "../services/admin.service";
+import { LoadingShield } from "@/components/LoadingShield";
 
 export default function ManageUsersPage() {
   const [error, setError] = useState<string | null>(null);
@@ -15,6 +16,7 @@ export default function ManageUsersPage() {
   const [usersLoading, setUsersLoading] = useState(true);
   const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [userToDelete, setUserToDelete] = useState<ManagedUser | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
   const router = useRouter();
@@ -55,14 +57,22 @@ export default function ManageUsersPage() {
     checkAdmin();
   }, [router]);
 
-  async function handleDeleteUser(user: ManagedUser) {
-    if (
-      !confirm(
-        `Delete user ${user.username} (${user.email})? This permanently removes their account.`
-      )
-    ) {
-      return;
+  // Auto-dismiss toasts
+  useEffect(() => {
+    if (success || error) {
+      const t = setTimeout(() => {
+        setSuccess(null);
+        setError(null);
+      }, 4000);
+      return () => clearTimeout(t);
     }
+  }, [success, error]);
+
+  function handleDeleteUser(user: ManagedUser) {
+    setUserToDelete(user);
+  }
+
+  async function executeDeleteUser(user: ManagedUser) {
 
     setDeletingUserId(user.id);
     setError(null);
@@ -77,6 +87,7 @@ export default function ManageUsersPage() {
     }
 
     setDeletingUserId(null);
+    setUserToDelete(null);
   }
 
   if (checking || !authorized) {
@@ -85,7 +96,7 @@ export default function ManageUsersPage() {
         <div className="absolute inset-0 opacity-[0.035] bg-[linear-gradient(rgba(255,255,255,0.5)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.5)_1px,transparent_1px)] bg-[size:60px_60px]" />
         <Navbar />
         <div className="flex h-[calc(100vh-4rem)] items-center justify-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#3B82F6]/30 border-t-[#3B82F6]" />
+          <LoadingShield className="w-12 h-12" />
         </div>
       </div>
     );
@@ -119,21 +130,28 @@ export default function ManageUsersPage() {
           </p>
         </div>
 
-        {/* Alerts */}
-        {success && (
-          <div className="mb-6 flex items-start gap-3 rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-4 text-sm text-emerald-300">
-            <svg className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            {success}
-          </div>
-        )}
-        {error && (
-          <div className="mb-6 flex items-start gap-3 rounded-xl border border-red-500/20 bg-red-500/10 p-4 text-sm text-red-400">
+        {/* Alerts (Toast) */}
+        {(success || error) && (
+          <div className={`fixed bottom-6 right-6 z-50 flex items-start gap-3 rounded-xl border p-4 text-sm shadow-2xl backdrop-blur-md animate-in slide-in-from-bottom-5 w-80 ${
+            success
+              ? "border-emerald-500/20 bg-emerald-500/15 text-emerald-300"
+              : "border-red-500/20 bg-red-500/15 text-red-400"
+          }`}>
             <svg className="mt-0.5 h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              {success
+                ? <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                : <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              }
             </svg>
-            {error}
+            <span className="flex-1">{success || error}</span>
+            <button
+              onClick={() => { setSuccess(null); setError(null); }}
+              className="text-white/40 hover:text-white transition-colors"
+            >
+              <svg className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
           </div>
         )}
 
@@ -181,8 +199,8 @@ export default function ManageUsersPage() {
           {/* Table / states */}
           <div className="px-6 py-4">
             {usersLoading ? (
-              <div className="flex items-center gap-3 py-8 text-sm text-white/40">
-                <div className="h-4 w-4 animate-spin rounded-full border-2 border-[#3B82F6]/30 border-t-[#3B82F6]" />
+              <div className="flex items-center gap-3 py-8 text-sm text-white/40 justify-center">
+                <LoadingShield className="h-5 w-5" />
                 Loading users…
               </div>
             ) : manageableUsers.length === 0 ? (
@@ -238,7 +256,7 @@ export default function ManageUsersPage() {
                           <span className="text-sm text-white/50">{user.email}</span>
                         </td>
                         <td className="py-3.5 pr-4">
-                          <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                          <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${
                             user.role === "admin"
                               ? "bg-[#8B5CF6]/15 text-[#8B5CF6] ring-1 ring-[#8B5CF6]/25"
                               : "bg-[#3B82F6]/15 text-[#3B82F6] ring-1 ring-[#3B82F6]/25"
@@ -264,6 +282,40 @@ export default function ManageUsersPage() {
           </div>
         </div>
       </main>
+
+      {/* Confirmation Modal Overlay */}
+      {userToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-sm rounded-2xl border border-white/10 bg-[#0a0e1a] p-6 shadow-2xl">
+            <h3 className="mb-2 text-lg font-semibold text-white tracking-tight">Delete User</h3>
+            <p className="mb-6 text-sm text-white/60 leading-relaxed">
+              Are you sure you want to permanently delete{" "}
+              <span className="font-semibold text-white">{userToDelete.username}</span>{" "}
+              ({userToDelete.email})? This action cannot be undone.
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setUserToDelete(null)}
+                disabled={deletingUserId === userToDelete.id}
+                className="rounded-lg border border-white/10 bg-transparent px-4 py-2 text-sm font-medium text-white/70 hover:bg-white/5 hover:text-white transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => executeDeleteUser(userToDelete)}
+                disabled={deletingUserId === userToDelete.id}
+                className="flex items-center justify-center min-w-[100px] rounded-lg bg-red-500/80 px-4 py-2 text-sm font-medium text-white hover:bg-red-500 transition-colors disabled:opacity-50"
+              >
+                {deletingUserId === userToDelete.id ? (
+                  <LoadingShield className="h-5 w-5" color="#ffffff" />
+                ) : (
+                  "Delete User"
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-[#030712] to-transparent" />
     </div>

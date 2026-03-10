@@ -5,6 +5,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import Navbar from "@/components/Navbar";
+import { LoadingShield } from "@/components/LoadingShield";
 
 // Types
 interface UserProfile {
@@ -113,6 +114,13 @@ export default function ProfilePage() {
     fetchProfile();
   }, [router]);
 
+  useEffect(() => {
+    if (message?.type === "success") {
+      const t = setTimeout(() => setMessage(null), 4000);
+      return () => clearTimeout(t);
+    }
+  }, [message]);
+
   async function handleUpdateProfile(e: React.FormEvent) {
     e.preventDefault();
     if (!profile) return;
@@ -208,7 +216,7 @@ export default function ProfilePage() {
         <div className="absolute inset-0 opacity-[0.035] bg-[linear-gradient(rgba(255,255,255,0.5)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.5)_1px,transparent_1px)] bg-[size:60px_60px]" />
         <Navbar />
         <div className="flex h-[calc(100vh-4rem)] items-center justify-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#3B82F6]/30 border-t-[#3B82F6]" />
+          <LoadingShield className="w-12 h-12" />
         </div>
       </div>
     );
@@ -237,12 +245,12 @@ export default function ProfilePage() {
           <p className="mt-2 text-sm text-white/40">Manage your personal details and avatar.</p>
         </div>
 
-        {/* Alert */}
+        {/* Alert (Toast) */}
         {message && (
-          <div className={`mb-6 flex items-start gap-3 rounded-xl border p-4 text-sm ${
+          <div className={`fixed bottom-6 right-6 z-50 flex items-start gap-3 rounded-xl border p-4 text-sm shadow-2xl backdrop-blur-md animate-in slide-in-from-bottom-5 w-80 ${
             message.type === "success"
-              ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-300"
-              : "border-red-500/20 bg-red-500/10 text-red-400"
+              ? "border-emerald-500/20 bg-emerald-500/15 text-emerald-300"
+              : "border-red-500/20 bg-red-500/15 text-red-400"
           }`}>
             <svg className="mt-0.5 h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               {message.type === "success"
@@ -250,7 +258,15 @@ export default function ProfilePage() {
                 : <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               }
             </svg>
-            {message.text}
+            <span className="flex-1">{message.text}</span>
+            <button
+              onClick={() => setMessage(null)}
+              className="text-white/40 hover:text-white transition-colors"
+            >
+              <svg className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
           </div>
         )}
 
@@ -273,7 +289,7 @@ export default function ProfilePage() {
               )}
               {uploading && (
                 <div className="absolute inset-0 flex items-center justify-center rounded-full bg-black/60">
-                  <div className="h-5 w-5 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                  <LoadingShield className="w-6 h-6" color="#ffffff" />
                 </div>
               )}
             </div>

@@ -5,11 +5,12 @@ import { motion, AnimatePresence } from "framer-motion";
 import { GitBranch, CheckCircle, Upload, Image as ImageIcon, ChevronDown, FileText, Clock, AlertCircle } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import { createClient } from "@/lib/supabase/client";
-import { 
-  disputeService, 
-  type RejectedClaim, 
-  type ClaimImage 
+import {
+  disputeService,
+  type RejectedClaim,
+  type ClaimImage,
 } from "./services/dispute.service";
+import { LoadingShield } from "@/components/LoadingShield";
 
 function wordCount(text: string) {
   return text.trim() === "" ? 0 : text.trim().split(/\s+/).length;
@@ -69,7 +70,7 @@ function ClaimDetail({ claim }: { claim: RejectedClaim }) {
             <p className="text-sm uppercase tracking-widest text-white/60 font-semibold mb-4 tracking-[0.12em]">Submitted Evidence</p>
             {loadingImages ? (
               <div className="flex items-center gap-2 text-xs text-white/55">
-                <div className="h-3 w-3 animate-spin rounded-full border border-white/20 border-t-white/60" />
+                <LoadingShield className="h-4 w-4" color="#ffffff" />
                 Loading images…
               </div>
             ) : images.length === 0 ? (
@@ -304,10 +305,7 @@ function DisputeForm({
             >
               {submitting ? (
                 <>
-                  <svg className="h-3.5 w-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
-                  </svg>
+                  <LoadingShield className="h-4 w-4" color="#000000" />
                   Submitting…
                 </>
               ) : "Submit Dispute"}
@@ -513,7 +511,7 @@ export default function DisputePanelPage() {
         <div className="space-y-3">
           {claimsLoading ? (
             <div className="flex items-center gap-3 py-12 justify-center text-sm text-white/40">
-              <div className="h-5 w-5 animate-spin rounded-full border-2 border-[#3B82F6]/30 border-t-[#3B82F6]" />
+              <LoadingShield className="h-6 w-6" />
               Loading rejected claims…
             </div>
           ) : claimsError ? (

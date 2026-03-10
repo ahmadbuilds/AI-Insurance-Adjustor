@@ -6,6 +6,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { LoadingShield } from "./LoadingShield";
 
 interface UserProfile {
   username: string;
@@ -24,11 +25,13 @@ function DropdownPortal({
   pos,
   onClose,
   onSignOut,
+  onImageError,
 }: {
   user: UserProfile | null;
   pos: ButtonPosition;
   onClose: () => void;
   onSignOut: () => void;
+  onImageError: () => void;
 }) {
   // Close on outside click
   useEffect(() => {
@@ -55,6 +58,7 @@ function DropdownPortal({
             <img
               src={user.profile_image_url}
               alt="Profile"
+              onError={onImageError}
               className="h-9 w-9 rounded-full object-cover ring-1 ring-white/20"
             />
           ) : (
@@ -80,16 +84,30 @@ function DropdownPortal({
 
       {/* Links */}
       <div className="py-1">
-        <Link
-          href="/dispute-panel"
-          onClick={onClose}
-          className="flex items-center gap-3 px-4 py-2.5 text-sm text-white/60 hover:bg-white/5 hover:text-white transition-colors"
-        >
-          <svg className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-          </svg>
-          Dispute Panel
-        </Link>
+        {user && user.role !== "admin" && (
+          <>
+            <Link
+              href="/claims"
+              onClick={onClose}
+              className="flex items-center gap-3 px-4 py-2.5 text-sm text-white/60 hover:bg-white/5 hover:text-white transition-colors"
+            >
+              <svg className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              Claims
+            </Link>
+            <Link
+              href="/dispute-panel"
+              onClick={onClose}
+              className="flex items-center gap-3 px-4 py-2.5 text-sm text-white/60 hover:bg-white/5 hover:text-white transition-colors"
+            >
+              <svg className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+              Dispute Panel
+            </Link>
+          </>
+        )}
         <Link
           href="/profile"
           onClick={onClose}
@@ -189,9 +207,6 @@ export default function Navbar() {
         }
 
         if (data) {
-          if (data.profile_image_url) {
-            data.profile_image_url = data.profile_image_url.split("?")[0] + "?t=" + Date.now();
-          }
           setUser(data);
         }
       }
@@ -228,6 +243,10 @@ export default function Navbar() {
     setDropdownOpen((v) => !v);
   };
 
+  const handleImageError = () => {
+    setUser((prev) => (prev ? { ...prev, profile_image_url: null } : null));
+  };
+
   return (
     <>
       <nav className="relative z-40 border-b border-white/8 bg-[#030712]/80 backdrop-blur-xl">
@@ -242,18 +261,23 @@ export default function Navbar() {
                 <span className="text-sm font-semibold text-white tracking-tight">Immaculate Aegis</span>
               </Link>
               <div className="hidden sm:flex sm:gap-1">
-                <Link
-                  href="/dashboard"
-                  className="rounded-lg px-3 py-2 text-sm text-white/50 hover:bg-white/5 hover:text-white transition-colors"
-                >
-                  Dashboard
-                </Link>
-                <Link
-                  href="/dispute-panel"
-                  className="rounded-lg px-3 py-2 text-sm text-white/50 hover:bg-white/5 hover:text-white transition-colors"
-                >
-                  Dispute Panel
-                </Link>
+
+                {user && user.role !== "admin" && (
+                  <>
+                    <Link
+                      href="/claims"
+                      className="rounded-lg px-3 py-2 text-sm text-white/50 hover:bg-white/5 hover:text-white transition-colors"
+                    >
+                      Claims
+                    </Link>
+                    <Link
+                      href="/dispute-panel"
+                      className="rounded-lg px-3 py-2 text-sm text-white/50 hover:bg-white/5 hover:text-white transition-colors"
+                    >
+                      Dispute Panel
+                    </Link>
+                  </>
+                )}
               </div>
             </div>
 
@@ -268,6 +292,7 @@ export default function Navbar() {
                 <img
                   src={user.profile_image_url}
                   alt="Profile"
+                  onError={handleImageError}
                   className="h-9 w-9 rounded-full object-cover ring-1 ring-white/20"
                 />
               ) : (
@@ -275,7 +300,7 @@ export default function Navbar() {
                   {user ? (
                     user.username.charAt(0).toUpperCase()
                   ) : (
-                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                    <LoadingShield className="w-4 h-4" color="#ffffff" />
                   )}
                 </div>
               )}
@@ -290,6 +315,7 @@ export default function Navbar() {
           pos={buttonPos}
           onClose={() => setDropdownOpen(false)}
           onSignOut={handleSignOut}
+          onImageError={handleImageError}
         />
       )}
     </>

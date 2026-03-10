@@ -5,6 +5,7 @@ import { createUser } from "@/app/auth/actions";
 import Navbar from "@/components/Navbar";
 import { useRouter } from "next/navigation";
 import { adminService } from "../services/admin.service";
+import { LoadingShield } from "@/components/LoadingShield";
 
 const USERNAME_MAX = 15;
 
@@ -179,7 +180,7 @@ export default function CreateUserPage() {
         <div className="absolute inset-0 opacity-[0.035] bg-[linear-gradient(rgba(255,255,255,0.5)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.5)_1px,transparent_1px)] bg-[size:60px_60px]" />
         <Navbar />
         <div className="flex h-[calc(100vh-4rem)] items-center justify-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#3B82F6]/30 border-t-[#3B82F6]" />
+          <LoadingShield className="h-12 w-12" />
         </div>
       </div>
     );
@@ -214,23 +215,28 @@ export default function CreateUserPage() {
         {/* Card */}
         <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-white/5 to-white/[0.02] p-8 shadow-2xl shadow-black/40">
 
-          {/* Success */}
-          {success && (
-            <div className="mb-6 flex items-start gap-3 rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-4 text-sm text-emerald-300">
-              <svg className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              {success}
-            </div>
-          )}
-
-          {/* Server error */}
-          {serverError && (
-            <div className="mb-6 flex items-start gap-3 rounded-xl border border-red-500/20 bg-red-500/10 p-4 text-sm text-red-400">
+          {/* Toasts */}
+          {(success || serverError) && (
+            <div className={`fixed bottom-6 right-6 z-50 flex items-start gap-3 rounded-xl border p-4 text-sm shadow-2xl backdrop-blur-md animate-in slide-in-from-bottom-5 w-80 ${
+              success
+                ? "border-emerald-500/20 bg-emerald-500/15 text-emerald-300"
+                : "border-red-500/20 bg-red-500/15 text-red-400"
+            }`}>
               <svg className="mt-0.5 h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                {success
+                  ? <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  : <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                }
               </svg>
-              {serverError}
+              <span className="flex-1">{success || serverError}</span>
+              <button
+                onClick={() => { setSuccess(null); setServerError(null); }}
+                className="text-white/40 hover:text-white transition-colors"
+              >
+                <svg className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
             </div>
           )}
 
@@ -354,11 +360,8 @@ export default function CreateUserPage() {
             >
               {loading ? (
                 <span className="flex items-center justify-center gap-2">
-                  <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
-                  </svg>
-                  Creating user…
+                  <LoadingShield className="h-4 w-4" color="#ffffff" />
+                  Creating account…
                 </span>
               ) : "Create user"}
             </button>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import Navbar from "@/components/Navbar";
@@ -12,10 +12,27 @@ const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/gif", "image/web
 
 import { validateTitle, type ImageFile } from "./utils/claim-helpers";
 import { ImageRow } from "./components/ImageRow";
+import { LoadingShield } from "@/components/LoadingShield";
 
 export default function ClaimsPage() {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const [user, setUser] = useState<any | null>(null); 
+
+  useEffect(() => {
+    async function getUser() {
+      const supabase = createClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) router.push("/login");
+      else setUser(user);
+    }
+    getUser();
+  }, [router]);
+
+
 
   const [title, setTitle]           = useState("");
   const [description, setDescription] = useState("");
@@ -24,6 +41,17 @@ export default function ClaimsPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError]           = useState<string | null>(null);
   const [success, setSuccess]       = useState<string | null>(null);
+
+  // Auto-dismiss toasts
+  useEffect(() => {
+    if (success || error) {
+      const t = setTimeout(() => {
+        setSuccess(null);
+        setError(null);
+      }, 4000);
+      return () => clearTimeout(t);
+    }
+  }, [success, error]);
 
   const [touchedTitle, setTouchedTitle] = useState(false);
   const [touchedDescription, setTouchedDescription] = useState(false);
@@ -147,28 +175,25 @@ export default function ClaimsPage() {
           </p>
         </div>
 
-        {/* Alerts */}
-        {error && (
-          <div className="mb-6 flex items-start gap-3 rounded-xl border border-red-500/20 bg-red-500/5 p-4">
-            <svg className="h-4 w-4 shrink-0 text-red-400 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        {/* Toasts */}
+        {(success || error) && (
+          <div className={`fixed bottom-6 right-6 z-50 flex items-start gap-3 rounded-xl border p-4 text-sm shadow-2xl backdrop-blur-md animate-in slide-in-from-bottom-5 w-80 ${
+            success
+              ? "border-emerald-500/20 bg-emerald-500/15 text-emerald-300"
+              : "border-red-500/20 bg-red-500/15 text-red-400"
+          }`}>
+            <svg className="mt-0.5 h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              {success
+                ? <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                : <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              }
             </svg>
-            <p className="text-sm text-red-300 flex-1">{error}</p>
-            <button onClick={() => setError(null)} className="text-red-400/50 hover:text-red-300 transition-colors" title="Dismiss error">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-        )}
-        {success && (
-          <div className="mb-6 flex items-start gap-3 rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4">
-            <svg className="h-4 w-4 shrink-0 text-emerald-400 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-            </svg>
-            <p className="text-sm text-emerald-300 flex-1">{success}</p>
-            <button onClick={() => setSuccess(null)} className="text-emerald-400/50 hover:text-emerald-300 transition-colors" title="Dismiss success">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <span className="flex-1">{success || error}</span>
+            <button
+              onClick={() => { setSuccess(null); setError(null); }}
+              className="text-white/40 hover:text-white transition-colors"
+            >
+              <svg className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
@@ -326,10 +351,7 @@ export default function ClaimsPage() {
               >
                 {submitting ? (
                   <>
-                    <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                    </svg>
+                    <LoadingShield className="h-5 w-5" color="#ffffff" />
                     Submitting Claim…
                   </>
                 ) : (
