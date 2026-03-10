@@ -33,11 +33,13 @@ function DropdownPortal({
   onSignOut: () => void;
   onImageError: () => void;
 }) {
-  // Close on outside click
   useEffect(() => {
     function handleClick(e: MouseEvent) {
       const target = e.target as HTMLElement;
-      if (!target.closest("[data-navbar-dropdown]") && !target.closest("[data-navbar-avatar]")) {
+      if (
+        !target.closest("[data-navbar-dropdown]") &&
+        !target.closest("[data-navbar-avatar]")
+      ) {
         onClose();
       }
     }
@@ -117,6 +119,7 @@ function DropdownPortal({
               </svg>
               Manage Users
             </Link>
+            {/* Manage Claims intentionally omitted — accessible via top navbar only */}
           </>
         )}
       </div>
@@ -136,7 +139,6 @@ function DropdownPortal({
     </div>
   );
 
-  // Portal to body to escape any stacking context
   if (typeof document === "undefined") return null;
   return createPortal(content, document.body);
 }
@@ -149,16 +151,12 @@ export default function Navbar() {
   const buttonRef = useRef<HTMLButtonElement>(null);
   const router = useRouter();
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  useEffect(() => { setMounted(true); }, []);
 
   const fetchUserData = useRef(async () => {
     try {
       const supabase = createClient();
-      const {
-        data: { user: authUser },
-      } = await supabase.auth.getUser();
+      const { data: { user: authUser } } = await supabase.auth.getUser();
 
       if (authUser) {
         let { data } = await supabase
@@ -182,9 +180,7 @@ export default function Navbar() {
           data = inserted;
         }
 
-        if (data) {
-          setUser(data);
-        }
+        if (data) setUser(data);
       }
     } catch (err) {
       console.error("Error fetching user:", err);
@@ -193,11 +189,7 @@ export default function Navbar() {
 
   useEffect(() => {
     fetchUserData.current();
-
-    function handleProfileUpdated() {
-      fetchUserData.current();
-    }
-
+    function handleProfileUpdated() { fetchUserData.current(); }
     window.addEventListener("profile-updated", handleProfileUpdated);
     return () => window.removeEventListener("profile-updated", handleProfileUpdated);
   }, []);
@@ -211,10 +203,7 @@ export default function Navbar() {
   const handleAvatarClick = () => {
     if (buttonRef.current) {
       const rect = buttonRef.current.getBoundingClientRect();
-      setButtonPos({
-        top: rect.bottom + 8,
-        right: window.innerWidth - rect.right,
-      });
+      setButtonPos({ top: rect.bottom + 8, right: window.innerWidth - rect.right });
     }
     setDropdownOpen((v) => !v);
   };
@@ -234,25 +223,26 @@ export default function Navbar() {
                 <div className="w-8 h-8 rounded-lg overflow-hidden">
                   <Image src="/favicon.png" alt="Logo" width={32} height={32} className="object-cover" />
                 </div>
-                <span className="text-sm font-semibold text-white tracking-tight">Immaculate Aegis</span>
+                <span className="text-sm font-semibold text-white tracking-tight">
+                  Immaculate Aegis
+                </span>
               </Link>
-              <div className="hidden sm:flex sm:gap-1">
 
+              <div className="hidden sm:flex sm:gap-1">
                 {user && user.role !== "admin" && (
                   <>
-                    <Link
-                      href="/claims"
-                      className="rounded-lg px-3 py-2 text-sm text-white/50 hover:bg-white/5 hover:text-white transition-colors"
-                    >
+                    <Link href="/claims" className="rounded-lg px-3 py-2 text-sm text-white/50 hover:bg-white/5 hover:text-white transition-colors">
                       Claims
                     </Link>
-                    <Link
-                      href="/dispute-panel"
-                      className="rounded-lg px-3 py-2 text-sm text-white/50 hover:bg-white/5 hover:text-white transition-colors"
-                    >
+                    <Link href="/dispute-panel" className="rounded-lg px-3 py-2 text-sm text-white/50 hover:bg-white/5 hover:text-white transition-colors">
                       Dispute Panel
                     </Link>
                   </>
+                )}
+                {user && user.role === "admin" && (
+                  <Link href="/admin/manage-claims" className="rounded-lg px-3 py-2 text-sm text-white/50 hover:bg-white/5 hover:text-white transition-colors">
+                    Manage Claims
+                  </Link>
                 )}
               </div>
             </div>
