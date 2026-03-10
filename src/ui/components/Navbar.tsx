@@ -6,7 +6,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { useUser } from "@/contexts/UserContext";
+import { LoadingShield } from "./LoadingShield";
 
 interface UserProfile {
   username: string;
@@ -166,28 +166,64 @@ function DropdownPortal({
 }
 
 export default function Navbar() {
-  const { user: contextUser } = useUser();
-  const [imageError, setImageError] = useState(false);
+  const [user, setUser] = useState<UserProfile | null>(null);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [buttonPos, setButtonPos] = useState<ButtonPosition>({ top: 0, right: 0 });
   const [mounted, setMounted] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const router = useRouter();
 
-  // Build local user view, respecting image error state
-  const user = contextUser
-    ? imageError
-      ? { ...contextUser, profile_image_url: null }
-      : contextUser
-    : null;
-
-  // Reset image error when context user's image URL changes (e.g. after profile update)
-  useEffect(() => {
-    setImageError(false);
-  }, [contextUser?.profile_image_url]);
-
   useEffect(() => {
     setMounted(true);
+  }, []);
+
+  const fetchUserData = useRef(async () => {
+    try {
+      const supabase = createClient();
+      const {
+        data: { user: authUser },
+      } = await supabase.auth.getUser();
+
+      if (authUser) {
+        let { data } = await supabase
+          .from("users")
+          .select("username, email, role, profile_image_url")
+          .eq("id", authUser.id)
+          .maybeSingle();
+
+        if (!data) {
+          const newProfile = {
+            id: authUser.id,
+            username: authUser.user_metadata?.username || authUser.email?.split("@")[0] || "user",
+            email: authUser.email!,
+            role: authUser.email === "cirsitiano678@gmail.com" ? "admin" : "claimant",
+          };
+          const { data: inserted } = await supabase
+            .from("users")
+            .upsert(newProfile, { onConflict: "id" })
+            .select("username, email, role, profile_image_url")
+            .single();
+          data = inserted;
+        }
+
+        if (data) {
+          setUser(data);
+        }
+      }
+    } catch (err) {
+      console.error("Error fetching user:", err);
+    }
+  });
+
+  useEffect(() => {
+    fetchUserData.current();
+
+    function handleProfileUpdated() {
+      fetchUserData.current();
+    }
+
+    window.addEventListener("profile-updated", handleProfileUpdated);
+    return () => window.removeEventListener("profile-updated", handleProfileUpdated);
   }, []);
 
   async function handleSignOut() {
@@ -208,7 +244,7 @@ export default function Navbar() {
   };
 
   const handleImageError = () => {
-    setImageError(true);
+    setUser((prev) => (prev ? { ...prev, profile_image_url: null } : null));
   };
 
   return (
@@ -261,7 +297,11 @@ export default function Navbar() {
                 />
               ) : (
                 <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-[#3B82F6] to-[#8B5CF6] text-sm font-semibold text-white ring-1 ring-white/20">
-                  {user ? user.username.charAt(0).toUpperCase() : "?"}
+                  {user ? (
+                    user.username.charAt(0).toUpperCase()
+                  ) : (
+                    <LoadingShield className="w-4 h-4" color="#ffffff" />
+                  )}
                 </div>
               )}
             </button>
