@@ -74,6 +74,8 @@ export default function ProfilePage() {
   const [uploading, setUploading]     = useState(false);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [message, setMessage]         = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [imgError, setImgError]       = useState(false);
+
 
   // Validation state
   const [touchedUsername, setTouchedUsername] = useState(false);
@@ -160,6 +162,7 @@ export default function ProfilePage() {
     }
 
     setUploading(true);
+    setImgError(false);
     setMessage(null);
     setImagePreview(URL.createObjectURL(file));
 
@@ -209,6 +212,14 @@ export default function ProfilePage() {
   }
 
   function getInitial(name: string) { return name.charAt(0).toUpperCase(); }
+
+  const handleImageError = () => {
+    setImgError(true);
+    if (profile) {
+      setProfile({ ...profile, profile_image_url: null });
+    }
+  };
+
 
   if (loading) {
     return (
@@ -275,11 +286,11 @@ export default function ProfilePage() {
           <h2 className="mb-5 text-xs font-semibold uppercase tracking-widest text-white/40">Profile Photo</h2>
           <div className="flex items-center gap-6">
             <div className="relative shrink-0">
-              {imagePreview || profile?.profile_image_url ? (
-                <Image
+              {(imagePreview || profile?.profile_image_url) && !imgError ? (
+                <img
                   src={imagePreview || profile!.profile_image_url!}
                   alt="Profile"
-                  width={80} height={80}
+                  onError={handleImageError}
                   className="h-20 w-20 rounded-full object-cover ring-1 ring-white/10"
                 />
               ) : (
