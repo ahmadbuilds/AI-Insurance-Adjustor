@@ -1,5 +1,4 @@
 "use client";
-
 import { motion, useScroll, useTransform } from "framer-motion";
 import {
   Upload,
@@ -15,17 +14,15 @@ import {
   Clock,
 } from "lucide-react";
 import Link from "next/link";
-import Image from "next/image"; // for site logo
+import Image from "next/image"; 
 import { useState } from "react";
-
-// ─── Imports mapping to extracted components ──────────────────────────────────
 import { useMouseParallax } from "@/hooks/useMouseParallax";
 import { Reveal } from "@/components/landing/Reveal";
 import { LandingNavbar as Navbar } from "@/components/landing/LandingNavbar";
 import { FeatureSidebarSection } from "@/components/landing/FeatureSidebarSection";
 
 
-// ─── Stats bar ────────────────────────────────────────────────────────────────
+//Stats bar 
 function StatsBar() {
   const stats = [
     { value: "94%", label: "AI accuracy rate" },
@@ -51,7 +48,7 @@ function StatsBar() {
   );
 }
 
-// ─── How it works ─────────────────────────────────────────────────────────────
+//How it works
 function HowItWorks() {
   const steps = [
     { n: "01", icon: <Upload className="w-5 h-5" />, title: "Claimant Submits", desc: "Photos and incident description uploaded asynchronously." },
@@ -95,7 +92,7 @@ function HowItWorks() {
   );
 }
 
-// ─── Testimonials section ─────────────────────────────────────────────────────
+//Testimonials section
 function TestimonialsSection() {
   const testimonials = [
     {
@@ -164,7 +161,7 @@ function TestimonialsSection() {
   );
 }
 
-// ─── Contact section ──────────────────────────────────────────────────────────
+//Contact section
 function ContactSection() {
   const [formData, setFormData] = useState({ name: "", email: "", message: "" });
 
@@ -333,7 +330,7 @@ function ContactSection() {
   );
 }
 
-// ─── Footer ───────────────────────────────────────────────────────────────────
+//Footer 
 function Footer() {
   const cols = [
     { heading: "Platform", links: ["Overview", "AI Engine", "Integrations", "Security", "Changelog"] },
@@ -383,7 +380,7 @@ function Footer() {
   );
 }
 
-// ─── Hero ─────────────────────────────────────────────────────────────────────
+// Hero
 function Hero() {
   const mouse = useMouseParallax();
   const { scrollY } = useScroll();
@@ -483,7 +480,7 @@ function Hero() {
   );
 }
 
-// ─── Features intro banner ────────────────────────────────────────────────────
+// Features intro banner
 function FeaturesIntro() {
   return (
     <div className="max-w-7xl mx-auto px-6 pt-20 pb-12">
@@ -502,7 +499,7 @@ function FeaturesIntro() {
   );
 }
 
-// ─── Root page ────────────────────────────────────────────────────────────────
+//Root page 
 export default function Home() {
   return (
     <div className="bg-[#030712] min-h-screen">

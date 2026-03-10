@@ -6,7 +6,15 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import Navbar from "@/components/Navbar";
 
-// ─── Validation (same rules as Create User) ───────────────────────────────────
+// Types
+interface UserProfile {
+  id: string;
+  username: string;
+  email: string;
+  role: string;
+  profile_image_url: string | null;
+}
+
 
 const USERNAME_MAX = 15;
 
@@ -56,18 +64,6 @@ function inputCls(value: string, hasErrors: boolean, touched: boolean) {
     return `${base} border-red-500/50 focus:border-red-500/60 focus:ring-red-500/20`;
   return `${base} border-emerald-500/40 focus:border-emerald-500/50 focus:ring-emerald-500/20`;
 }
-
-// ─── Types ───────────────────────────────────────────────────────────────────
-
-interface UserProfile {
-  id: string;
-  username: string;
-  email: string;
-  role: string;
-  profile_image_url: string | null;
-}
-
-// ─── Page ────────────────────────────────────────────────────────────────────
 
 export default function ProfilePage() {
   const [profile, setProfile]         = useState<UserProfile | null>(null);
@@ -206,7 +202,6 @@ export default function ProfilePage() {
 
   function getInitial(name: string) { return name.charAt(0).toUpperCase(); }
 
-  // ── Loading ──
   if (loading) {
     return (
       <div className="relative min-h-screen bg-[#030712]">

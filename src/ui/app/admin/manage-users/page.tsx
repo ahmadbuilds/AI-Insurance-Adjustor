@@ -4,15 +4,7 @@ import { useEffect, useState } from "react";
 import { deleteUserByAdmin } from "@/app/auth/actions";
 import Navbar from "@/components/Navbar";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
-
-interface ManagedUser {
-  id: string;
-  username: string;
-  email: string;
-  role: string;
-  created_at: string;
-}
+import { adminService, type ManagedUser } from "../services/admin.service";
 
 export default function ManageUsersPage() {
   const [error, setError] = useState<string | null>(null);
@@ -40,40 +32,21 @@ export default function ManageUsersPage() {
 
   async function loadUsers() {
     setUsersLoading(true);
-    const supabase = createClient();
-    const { data } = await supabase
-      .from("users")
-      .select("id, username, email, role, created_at")
-      .order("created_at", { ascending: false });
-
-    setUsers(data || []);
+    const fetchedUsers = await adminService.fetchAllUsers();
+    setUsers(fetchedUsers);
     setUsersLoading(false);
   }
 
   useEffect(() => {
     async function checkAdmin() {
-      const supabase = createClient();
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      if (!user) {
-        router.push("/login");
-        return;
-      }
-
-      const { data: profile } = await supabase
-        .from("users")
-        .select("role")
-        .eq("id", user.id)
-        .maybeSingle();
-
-      if (!profile || profile.role !== "admin") {
+      const adminId = await adminService.checkIsAdmin();
+      
+      if (!adminId) {
         router.push("/dashboard");
         return;
       }
 
-      setCurrentUserId(user.id);
+      setCurrentUserId(adminId);
       setAuthorized(true);
       setChecking(false);
       await loadUsers();

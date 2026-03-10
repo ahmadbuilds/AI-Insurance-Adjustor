@@ -4,6 +4,7 @@ import { useState, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import Navbar from "@/components/Navbar";
+import { claimsService } from "./services/claims.service";
 
 const MAX_IMAGES = 10;
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
@@ -24,14 +25,12 @@ export default function ClaimsPage() {
   const [error, setError]           = useState<string | null>(null);
   const [success, setSuccess]       = useState<string | null>(null);
 
-  // Touched state for inline validation
   const [touchedTitle, setTouchedTitle] = useState(false);
   const [touchedDescription, setTouchedDescription] = useState(false);
 
   const titleError   = validateTitle(title);
   const titleMissing = touchedTitle && !title.trim();
 
-  // Word count helper
   const wordCount = description.trim() === "" ? 0 : description.trim().split(/\s+/).length;
   const descriptionError = touchedDescription && description.trim() !== "" && wordCount < 200
     ? `At least 200 words required. (${wordCount}/200)`
@@ -40,11 +39,9 @@ export default function ClaimsPage() {
     : null;
   const descriptionValid = description.trim() !== "" && wordCount >= 200;
 
-  // Presence check for button gating
+  
   const formFilled = title.trim() !== "" && description.trim() !== "" && images.length > 0;
   const formValid  = formFilled && !titleError && descriptionValid;
-
-  // ─── Image handling ──────────────────────────────────────────────────────────
 
   const addImages = useCallback((files: FileList | File[]) => {
     const fileArray = Array.from(files);
@@ -82,8 +79,7 @@ export default function ClaimsPage() {
     if (e.dataTransfer.files.length) addImages(e.dataTransfer.files);
   }, [addImages]);
 
-  // ─── Submit ──────────────────────────────────────────────────────────────────
-
+ 
   const handleSubmit = async () => {
     setError(null);
     setSuccess(null);
@@ -96,67 +92,7 @@ export default function ClaimsPage() {
     setSubmitting(true);
 
     try {
-      const supabase = createClient();
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
-      if (authError || !user) {
-        setError("You must be logged in to submit a claim.");
-        setSubmitting(false);
-        return;
-      }
-
-      const { data: claim, error: claimError } = await supabase
-        .from("claims")
-        .insert({ user_id: user.id, title: title.trim(), description: description.trim(), status: "pending" })
-        .select("id")
-        .single();
-
-      if (claimError || !claim) {
-        setError(claimError?.message || "Failed to create claim.");
-        setSubmitting(false);
-        return;
-      }
-
-      const imageRecords: {
-        claim_id: string; user_id: string; storage_path: string;
-        file_name: string; file_size: number; mime_type: string;
-      }[] = [];
-
-      for (const img of images) {
-        const ext = img.file.name.split(".").pop() || "jpg";
-        const storagePath = `${user.id}/${claim.id}/${crypto.randomUUID()}.${ext}`;
-
-        const { error: uploadError } = await supabase.storage
-          .from("claim_images")
-          .upload(storagePath, img.file, { contentType: img.file.type });
-
-        if (uploadError) {
-          setError(`Failed to upload "${img.file.name}": ${uploadError.message}`);
-          setSubmitting(false);
-          return;
-        }
-
-        imageRecords.push({
-          claim_id: claim.id, user_id: user.id, storage_path: storagePath,
-          file_name: img.file.name, file_size: img.file.size, mime_type: img.file.type,
-        });
-      }
-
-      const { error: imgInsertError } = await supabase.from("claim_images").insert(imageRecords);
-      if (imgInsertError) {
-        setError(`Claim created but image records failed: ${imgInsertError.message}`);
-        setSubmitting(false);
-        return;
-      }
-
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.access_token) {
-        const backendUrl = process.env.NEXT_PUBLIC_BACKEND_API_URL || "http://localhost:8000";
-        await fetch(`${backendUrl}/publish_event?event_channel=claim_evaluation_${claim.id}`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
-          body: JSON.stringify({ claim_id: claim.id, user_id: user.id, action: "start_evaluation" }),
-        });
-      }
+      await claimsService.submitClaim(title, description, images);
 
       setSuccess("Claim submitted successfully! Your claim is now pending AI evaluation.");
       setTitle("");
@@ -171,8 +107,7 @@ export default function ClaimsPage() {
     }
   };
 
-  // ─── Render ──────────────────────────────────────────────────────────────────
-
+  
   return (
     <div className="relative min-h-screen bg-[#030712] overflow-hidden">
       {/* Grid */}
@@ -240,12 +175,12 @@ export default function ClaimsPage() {
           </div>
         )}
 
-        {/* ── Card shell (matches mockup window chrome) ── */}
+        {/* Card shell (matches mockup window chrome) */}
         <div className="rounded-2xl border border-white/10 bg-linear-to-br from-white/5 to-white/2 overflow-hidden shadow-2xl shadow-black/40">
 
           <div className="p-6 space-y-6">
 
-            {/* ── Claim Title ── */}
+            {/* Claim Title */}
             <div>
               <div className="flex items-center justify-between mb-2">
                 <label className="text-sm text-white/60">Claim Title</label>
@@ -255,7 +190,6 @@ export default function ClaimsPage() {
                 type="text"
                 value={title}
                 onChange={(e) => {
-                  // Strip digits and non-allowed characters on the fly
                   setTitle(e.target.value);
                 }}
                 onBlur={() => setTouchedTitle(true)}
@@ -378,7 +312,7 @@ export default function ClaimsPage() {
               )}
             </div>
 
-            {/* ── Submit ── */}
+            {/*  Submit  */}
             <div className="pt-2 border-t border-white/5">
               <button
                 onClick={handleSubmit}

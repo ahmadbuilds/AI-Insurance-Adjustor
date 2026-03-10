@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { dashboardService } from "./services/dashboard.service";
 import { redirect } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import Link from "next/link";
@@ -6,21 +6,14 @@ import Link from "next/link";
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
-  const supabase = await createClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
+  
+  const data = await dashboardService.getDashboardProfile();
+  
+  if (!data?.user) {
     redirect("/login");
   }
 
-  const { data: profile } = await supabase
-    .from("users")
-    .select("*")
-    .eq("id", user.id)
-    .single();
+  const { profile } = data;
 
   return (
     <div className="relative min-h-screen bg-[#030712] overflow-hidden">

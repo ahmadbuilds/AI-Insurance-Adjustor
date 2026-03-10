@@ -17,7 +17,7 @@ export default function LoginForm({ action }: LoginFormProps) {
 
   const [showPassword, setShowPassword] = useState(false);
 
-  // Ref to the hidden submit button so we can trigger it programmatically on Enter
+  
   const submitRef = useRef<HTMLButtonElement>(null);
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {

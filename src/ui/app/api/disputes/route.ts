@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
-import pdfParse from "pdf-parse"; // use class-based parser
+import pdfParse from "pdf-parse"; 
 import mammoth from "mammoth";
 
 export const runtime = "nodejs";
@@ -12,13 +12,11 @@ async function extractTextFromFile(file: File): Promise<string> {
   const name = file.name.toLowerCase();
   const type = file.type;
 
-  // PDF
   if (type === "application/pdf" || name.endsWith(".pdf")) {
     const result = await pdfParse(buffer);
     return result.text ?? "";
   }
 
-  // DOCX
   if (
     type ===
       "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
@@ -27,8 +25,6 @@ async function extractTextFromFile(file: File): Promise<string> {
     const result = await mammoth.extractRawText({ buffer });
     return result.value ?? "";
   }
-
-  // Legacy .doc and other unsupported formats: skip extraction
   return "";
 }
 
@@ -39,10 +35,6 @@ export async function POST(request: Request) {
       data: { user },
     } = await supabase.auth.getUser();
 
-    // service-role client is used for storage uploads so that RLS policies
-    // which depend on auth.uid() will not reject the request in cases where
-    // the session cookie isn't propagated correctly during the upload.
-    // This client must be initialized with the service role key.
     const serviceRoleKey =
       process.env.SUPABASE_SERVICE_ROLE_KEY ||
       process.env.NEXT_SUPABASE_SERVICE_ROLE_KEY;
@@ -74,7 +66,6 @@ export async function POST(request: Request) {
       );
     }
 
-    // Optional: verify the claim belongs to the user and is rejected
     const { data: claim, error: claimError } = await supabase
       .from("claims")
       .select("id, user_id, status")

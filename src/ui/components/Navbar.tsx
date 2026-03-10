@@ -284,7 +284,6 @@ export default function Navbar() {
         </div>
       </nav>
 
-      {/* Portal dropdown — renders at document.body, escapes all stacking contexts */}
       {mounted && dropdownOpen && (
         <DropdownPortal
           user={user}

@@ -72,7 +72,6 @@ export async function createUser(formData: FormData) {
 
   const adminSupabase = createSupabaseClient(supabaseUrl, serviceRoleKey);
 
-  // Create user via admin API — email_confirm: false keeps the account inactive
   const { data: newUser, error: createError } =
     await adminSupabase.auth.admin.createUser({
       email,
@@ -195,12 +194,11 @@ export async function deleteUserByAdmin(userId: string) {
       return { error: listError.message };
     }
 
-    // claim_images are stored as userId/claimId/filename — we need to recurse into subfolders
+    
     if (claimFiles && claimFiles.length > 0) {
       const allPaths: string[] = [];
       for (const item of claimFiles) {
         if (item.id === null) {
-          // It's a folder (claim ID folder) — list its contents
           const { data: subFiles } = await adminSupabase
             .storage
             .from("claim_images")
@@ -249,8 +247,6 @@ export async function deleteUserByAdmin(userId: string) {
     return { success: true };
   }
 
-  // Some projects can fail hard-delete due to DB-side constraints/triggers.
-  // Fall back to soft-delete in Auth and explicit profile cleanup in public.users.
   if (/database error deleting user/i.test(error.message)) {
     const { error: softDeleteError } = await adminSupabase.auth.admin.deleteUser(
       userId,

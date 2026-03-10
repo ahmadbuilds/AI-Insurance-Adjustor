@@ -1,6 +1,5 @@
 import { ImageFile } from "../utils/claim-helpers";
 
-// Compact row-style image item — matches claim-upload.tsx mockup aesthetic
 export function ImageRow({ img, onRemove }: { img: ImageFile; onRemove: () => void }) {
   const sizeMB = (img.file.size / 1024 / 1024).toFixed(1);
 
@@ -8,7 +7,6 @@ export function ImageRow({ img, onRemove }: { img: ImageFile; onRemove: () => vo
     <div className="flex items-center gap-3 rounded-lg bg-white/5 px-3 py-2.5 border border-white/8 group">
       {/* Small thumbnail */}
       <div className="relative h-9 w-9 shrink-0 rounded-md overflow-hidden bg-[#3B82F6]/20 ring-1 ring-[#3B82F6]/30">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={img.url} alt={img.file.name} className="h-full w-full object-cover" />
       </div>
 

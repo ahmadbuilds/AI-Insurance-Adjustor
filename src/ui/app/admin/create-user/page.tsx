@@ -4,9 +4,7 @@ import { useState, useEffect } from "react";
 import { createUser } from "@/app/auth/actions";
 import Navbar from "@/components/Navbar";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
-
-// ─── Validation helpers ──────────────────────────────────────────────────────
+import { adminService } from "../services/admin.service";
 
 const USERNAME_MAX = 15;
 
@@ -38,7 +36,6 @@ function getPasswordChecks(v: string): PwCheck[] {
   ];
 }
 
-// ─── Small components ────────────────────────────────────────────────────────
 
 function FieldErrors({ messages }: { messages: string[] }) {
   if (!messages.length) return null;
@@ -103,7 +100,6 @@ function inputCls(value: string, hasErrors: boolean, touched: boolean) {
   return `${base} border-emerald-500/40 focus:border-emerald-500/50 focus:ring-emerald-500/20`;
 }
 
-// ─── Page ────────────────────────────────────────────────────────────────────
 
 export default function CreateUserPage() {
   const [serverError, setServerError] = useState<string | null>(null);
@@ -137,11 +133,12 @@ export default function CreateUserPage() {
 
   useEffect(() => {
     async function checkAdmin() {
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { router.push("/login"); return; }
-      const { data: profile } = await supabase.from("users").select("role").eq("id", user.id).maybeSingle();
-      if (!profile || profile.role !== "admin") { router.push("/dashboard"); return; }
+      const adminId = await adminService.checkIsAdmin();
+      if (!adminId) {
+        // Dashboard will handle unauthenticated users
+        router.push("/dashboard");
+        return;
+      }
       setAuthorized(true);
       setChecking(false);
     }
@@ -150,7 +147,6 @@ export default function CreateUserPage() {
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    // Touch all fields so errors surface
     setTUser(true); setTEmail(true); setTPw(true);
     if (!formValid) return;
 
@@ -176,7 +172,7 @@ export default function CreateUserPage() {
     setLoading(false);
   }
 
-  // ── Loading / auth check ──
+ 
   if (checking || !authorized) {
     return (
       <div className="relative min-h-screen bg-[#030712]">
@@ -189,7 +185,7 @@ export default function CreateUserPage() {
     );
   }
 
-  // ── Main render ──
+  
   return (
     <div className="relative min-h-screen bg-[#030712] overflow-hidden">
       {/* Grid */}

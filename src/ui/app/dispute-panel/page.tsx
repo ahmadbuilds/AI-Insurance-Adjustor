@@ -5,27 +5,11 @@ import { motion, AnimatePresence } from "framer-motion";
 import { GitBranch, CheckCircle, Upload, Image as ImageIcon, ChevronDown, FileText, Clock, AlertCircle } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import { createClient } from "@/lib/supabase/client";
-
-// ─── Types ────────────────────────────────────────────────────────────────────
-
-type RejectedClaim = {
-  id: string;
-  title: string;
-  description: string;
-  status: string;
-  ai_verdict: string | null;
-  created_at: string;
-};
-
-type ClaimImage = {
-  id: string;
-  file_name: string;
-  storage_path: string;
-  file_size: number;
-  mime_type: string;
-};
-
-// ─── Helpers ─────────────────────────────────────────────────────────────────
+import { 
+  disputeService, 
+  type RejectedClaim, 
+  type ClaimImage 
+} from "./services/dispute.service";
 
 function wordCount(text: string) {
   return text.trim() === "" ? 0 : text.trim().split(/\s+/).length;
@@ -42,7 +26,6 @@ function formatBytes(bytes: number) {
   return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 }
 
-// ─── Claim Detail Expand (shown when body is clicked) ─────────────────────────
 
 function ClaimDetail({ claim }: { claim: RejectedClaim }) {
   const [images, setImages] = useState<ClaimImage[]>([]);
@@ -50,13 +33,8 @@ function ClaimDetail({ claim }: { claim: RejectedClaim }) {
 
   useEffect(() => {
     (async () => {
-      const supabase = createClient();
-      const { data } = await supabase
-        .from("claim_images")
-        .select("id, file_name, storage_path, file_size, mime_type")
-        .eq("claim_id", claim.id)
-        .order("created_at", { ascending: true });
-      setImages(data ?? []);
+      const fetchedImages = await disputeService.fetchClaimImages(claim.id);
+      setImages(fetchedImages);
       setLoadingImages(false);
     })();
   }, [claim.id]);
@@ -110,7 +88,6 @@ function ClaimDetail({ claim }: { claim: RejectedClaim }) {
   );
 }
 
-// ─── Image row (mirrors claim-upload.tsx style) ───────────────────────────────
 
 function ImageRow({ img, claimId }: { img: ClaimImage; claimId: string }) {
   const [thumbUrl, setThumbUrl] = useState<string | null>(null);
@@ -127,7 +104,6 @@ function ImageRow({ img, claimId }: { img: ClaimImage; claimId: string }) {
       {/* Thumbnail */}
       <div className="relative h-16 w-16 shrink-0 rounded-xl overflow-hidden bg-[#3B82F6]/20 ring-1 ring-[#3B82F6]/30 flex items-center justify-center">
         {thumbUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
           <img src={thumbUrl} alt={img.file_name} className="h-full w-full object-cover" />
         ) : (
           <FileText className="w-7 h-7 text-[#3B82F6]/60" />
@@ -149,7 +125,6 @@ function ImageRow({ img, claimId }: { img: ClaimImage; claimId: string }) {
   );
 }
 
-// ─── Dispute Form (shown when "Dispute" button is clicked) ────────────────────
 
 function DisputeForm({
   claim,
@@ -184,19 +159,8 @@ function DisputeForm({
     setSubmitError(null);
 
     try {
-      const formData = new FormData();
-      formData.append("claim_id", claim.id);
-      formData.append("description", reason);
-      if (evidenceFile) formData.append("evidence", evidenceFile);
-      if (photoFile) formData.append("photos", photoFile);
-
-      const response = await fetch("/api/disputes", { method: "POST", body: formData });
-      const result = await response.json().catch(() => ({}));
-
-      if (!response.ok) {
-        setSubmitError(result?.error || "Failed to submit dispute. Please try again.");
-        return;
-      }
+      // Deferring the actual upload/submission logic to our service
+      await disputeService.submitDispute(claim.id, reason, evidenceFile, photoFile);
 
       setSubmitted(true);
       onSuccess(claim.id);
@@ -362,8 +326,6 @@ function DisputeForm({
   );
 }
 
-// ─── Single claim notification row ───────────────────────────────────────────
-
 function ClaimRow({
   claim,
   mode,
@@ -462,50 +424,22 @@ function ClaimRow({
   );
 }
 
-// ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function DisputePanelPage() {
   const [claims, setClaims] = useState<RejectedClaim[]>([]);
   const [claimsLoading, setClaimsLoading] = useState(true);
   const [claimsError, setClaimsError] = useState<string | null>(null);
 
-  // Per-claim mode: idle | detail | dispute | disputed
+  
   const [claimModes, setClaimModes] = useState<Record<string, "idle" | "detail" | "dispute" | "disputed">>({});
 
   useEffect(() => {
     (async () => {
       try {
-        const supabase = createClient();
-
-        // Fetch rejected claims with full data needed for detail view
-        const { data: claimsData, error: claimsErr } = await supabase
-          .from("claims")
-          .select("id, title, description, status, ai_verdict, created_at")
-          .eq("status", "rejected")
-          .order("created_at", { ascending: false });
-
-        if (claimsErr) { setClaimsError(claimsErr.message); return; }
-        const fetchedClaims = claimsData ?? [];
+        const { claims: fetchedClaims, modes } = await disputeService.fetchRejectedClaimsAndModes();
+        
         setClaims(fetchedClaims);
-
-        // Check which already have disputes
-        if (fetchedClaims.length > 0) {
-          const { data: { user } } = await supabase.auth.getUser();
-          if (user) {
-            const { data: existingDisputes } = await supabase
-              .from("disputes")
-              .select("claim_id")
-              .eq("user_id", user.id)
-              .in("claim_id", fetchedClaims.map((c) => c.id));
-
-            const disputedIds = new Set((existingDisputes ?? []).map((d) => d.claim_id));
-            const modes: Record<string, "idle" | "detail" | "dispute" | "disputed"> = {};
-            fetchedClaims.forEach((c) => {
-              modes[c.id] = disputedIds.has(c.id) ? "disputed" : "idle";
-            });
-            setClaimModes(modes);
-          }
-        }
+        setClaimModes(modes);
       } catch (err) {
         setClaimsError(err instanceof Error ? err.message : "Failed to load claims");
       } finally {
