@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useState, useRef } from "react";
+import { LoadingShield } from "@/components/LoadingShield";
 
 interface LoginFormProps {
   action: (formData: FormData) => Promise<{ error: string } | void>;
@@ -28,7 +29,7 @@ export default function LoginForm({ action }: LoginFormProps) {
   }
 
   return (
-    <form action={formAction} className="space-y-4">
+    <form action={formAction} className="space-y-4" autoComplete="off">
       {/* Email */}
       <div>
         <label htmlFor="login-email" className="block text-sm text-white/60 mb-2">
@@ -39,6 +40,7 @@ export default function LoginForm({ action }: LoginFormProps) {
           name="email"
           type="email"
           required
+          autoComplete="off"
           onKeyDown={handleKeyDown}
           className="w-full rounded-lg border border-white/10 bg-white/5 px-4 py-2.5 text-white placeholder:text-white/30 focus:border-[#3B82F6]/50 focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/20 transition-colors"
           placeholder="you@example.com"
@@ -56,8 +58,9 @@ export default function LoginForm({ action }: LoginFormProps) {
             name="password"
             type={showPassword ? "text" : "password"}
             required
+            autoComplete="new-password"
             onKeyDown={handleKeyDown}
-            className="w-full rounded-lg border border-white/10 bg-white/5 px-4 py-2.5 pr-11 text-white placeholder:text-white/30 focus:border-[#3B82F6]/50 focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/20 transition-colors"
+            className="w-full rounded-lg border border-white/10 bg-white/5 px-4 py-2.5 pr-11 text-white placeholder:text-white/30 focus:border-[#3B82F6]/50 focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/20 transition-colors [&::-ms-reveal]:hidden [&::-webkit-credentials-auto-fill-button]:hidden"
             placeholder="••••••••"
           />
           <button
@@ -97,9 +100,16 @@ export default function LoginForm({ action }: LoginFormProps) {
       <button
         type="submit"
         disabled={pending}
-        className="mt-2 w-full rounded-full bg-white px-4 py-3 text-sm font-medium text-black hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-50 transition-all hover:scale-[1.02] active:scale-[0.98]"
+        className="mt-2 w-full rounded-full bg-white px-4 py-3 text-sm font-medium text-black hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-50 transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2"
       >
-        {pending ? "Signing in…" : "Sign in"}
+        {pending ? (
+          <>
+            <LoadingShield className="w-5 h-5" color="#000000" />
+            <span>Signing in…</span>
+          </>
+        ) : (
+          "Sign in"
+        )}
       </button>
     </form>
   );
