@@ -2,13 +2,24 @@
 
 import React, { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { GitBranch, CheckCircle, Upload, Image as ImageIcon, ChevronDown, FileText, Clock, AlertCircle } from "lucide-react";
+import {
+  GitBranch,
+  CheckCircle,
+  Upload,
+  Image as ImageIcon,
+  ChevronDown,
+  FileText,
+  Clock,
+  AlertCircle,
+  XCircle,
+} from "lucide-react";
 import Navbar from "@/components/Navbar";
 import { createClient } from "@/lib/supabase/client";
 import {
   disputeService,
   type RejectedClaim,
   type ClaimImage,
+  type DisputeInfo,
 } from "./services/dispute.service";
 import { LoadingShield } from "@/components/LoadingShield";
 
@@ -18,7 +29,9 @@ function wordCount(text: string) {
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("en-US", {
-    year: "numeric", month: "short", day: "numeric",
+    year: "numeric",
+    month: "short",
+    day: "numeric",
   });
 }
 
@@ -27,7 +40,7 @@ function formatBytes(bytes: number) {
   return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 }
 
-
+// ── Claim detail (images + description + AI verdict) ─────────────────────────
 function ClaimDetail({ claim }: { claim: RejectedClaim }) {
   const [images, setImages] = useState<ClaimImage[]>([]);
   const [loadingImages, setLoadingImages] = useState(true);
@@ -48,37 +61,48 @@ function ClaimDetail({ claim }: { claim: RejectedClaim }) {
       transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
       className="overflow-hidden"
     >
-      <div className="border-t border-white/15 mx-0 mt-0 mb-0">
+      <div className="border-t border-white/15">
         <div className="px-10 pt-8 pb-10 space-y-10">
-
           {/* Description */}
           <div>
-            <p className="text-xs uppercase tracking-widest text-white/55 font-semibold mb-3 tracking-[0.12em]">Description</p>
-            <p className="text-lg text-white/85 leading-loose">{claim.description}</p>
+            <p className="text-xs uppercase tracking-widest text-white/55 font-semibold mb-3 tracking-[0.12em]">
+              Description
+            </p>
+            <p className="text-lg text-white/85 leading-loose">
+              {claim.description}
+            </p>
           </div>
 
           {/* AI Verdict */}
           {claim.ai_verdict && (
             <div className="rounded-2xl border border-red-500/30 bg-red-500/10 p-8">
-              <p className="text-sm uppercase tracking-widest text-red-400 font-semibold mb-3 tracking-[0.12em]">AI Rejection Reason</p>
-              <p className="text-lg text-red-200 leading-loose">{claim.ai_verdict}</p>
+              <p className="text-sm uppercase tracking-widest text-red-400 font-semibold mb-3 tracking-[0.12em]">
+                AI Rejection Reason
+              </p>
+              <p className="text-lg text-red-200 leading-loose">
+                {claim.ai_verdict}
+              </p>
             </div>
           )}
 
           {/* Images */}
           <div>
-            <p className="text-sm uppercase tracking-widest text-white/60 font-semibold mb-4 tracking-[0.12em]">Submitted Evidence</p>
+            <p className="text-sm uppercase tracking-widest text-white/60 font-semibold mb-4 tracking-[0.12em]">
+              Submitted Evidence
+            </p>
             {loadingImages ? (
               <div className="flex items-center gap-2 text-xs text-white/55">
                 <LoadingShield className="h-4 w-4" color="#ffffff" />
                 Loading images…
               </div>
             ) : images.length === 0 ? (
-              <p className="text-xs text-white/55">No images attached to this claim.</p>
+              <p className="text-xs text-white/55">
+                No images attached to this claim.
+              </p>
             ) : (
               <div className="space-y-2">
                 {images.map((img) => (
-                  <ImageRow key={img.id} img={img} claimId={claim.id} />
+                  <ImageRow key={img.id} img={img} />
                 ))}
               </div>
             )}
@@ -89,44 +113,146 @@ function ClaimDetail({ claim }: { claim: RejectedClaim }) {
   );
 }
 
-
-function ImageRow({ img, claimId }: { img: ClaimImage; claimId: string }) {
+// ── Image row ─────────────────────────────────────────────────────────────────
+function ImageRow({ img }: { img: ClaimImage }) {
   const [thumbUrl, setThumbUrl] = useState<string | null>(null);
 
   useEffect(() => {
     if (!img.mime_type?.startsWith("image/")) return;
     const supabase = createClient();
-    const { data } = supabase.storage.from("claim_images").getPublicUrl(img.storage_path);
+    const { data } = supabase.storage
+      .from("claim_images")
+      .getPublicUrl(img.storage_path);
     if (data?.publicUrl) setThumbUrl(data.publicUrl);
   }, [img]);
 
   return (
     <div className="flex items-center gap-5 rounded-2xl bg-white/8 px-6 py-5 border border-white/15">
-      {/* Thumbnail */}
       <div className="relative h-16 w-16 shrink-0 rounded-xl overflow-hidden bg-[#3B82F6]/20 ring-1 ring-[#3B82F6]/30 flex items-center justify-center">
         {thumbUrl ? (
-          <img src={thumbUrl} alt={img.file_name} className="h-full w-full object-cover" />
+          <img
+            src={thumbUrl}
+            alt={img.file_name}
+            className="h-full w-full object-cover"
+          />
         ) : (
           <FileText className="w-7 h-7 text-[#3B82F6]/60" />
         )}
       </div>
-      {/* Name + bar */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between mb-1">
-          <p className="text-lg font-medium text-white/90 truncate pr-3">{img.file_name}</p>
-          <span className="text-base text-white/55 shrink-0">{formatBytes(img.file_size)}</span>
+          <p className="text-lg font-medium text-white/90 truncate pr-3">
+            {img.file_name}
+          </p>
+          <span className="text-base text-white/55 shrink-0">
+            {formatBytes(img.file_size)}
+          </span>
         </div>
         <div className="w-full h-2 rounded-full bg-white/10 overflow-hidden">
           <div className="h-full w-full rounded-full bg-gradient-to-r from-[#3B82F6] to-[#8B5CF6]" />
         </div>
       </div>
-      {/* Check */}
       <CheckCircle className="h-6 w-6 text-emerald-400 shrink-0" />
     </div>
   );
 }
 
+// ── Decision Banner — shown when a filed dispute has been resolved ─────────────
+function DisputeDecisionBanner({ info }: { info: DisputeInfo }) {
+  const isApproved = info.status === "approved";
+  const isRejected = info.status === "rejected";
+  const isPending  = info.status === "pending";
 
+  return (
+    <motion.div
+      initial={{ opacity: 0, height: 0 }}
+      animate={{ opacity: 1, height: "auto" }}
+      exit={{ opacity: 0, height: 0 }}
+      transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+      className="overflow-hidden"
+    >
+      <div className="border-t border-white/15">
+        <div className="px-10 pt-8 pb-10 space-y-5">
+          {/* Status banner */}
+          {isPending && (
+            <div className="flex items-start gap-4 rounded-2xl border border-yellow-500/25 bg-yellow-500/8 p-6">
+              <Clock className="w-6 h-6 text-yellow-400 shrink-0 mt-0.5" />
+              <div>
+                <p className="text-base font-semibold text-yellow-300">
+                  Dispute Under Review
+                </p>
+                <p className="text-sm text-yellow-400/70 mt-1.5 leading-relaxed">
+                  Your dispute was filed on {formatDate(info.created_at)}. An
+                  adjuster will review it shortly and you will be notified by
+                  email once a decision has been made.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {isApproved && (
+            <div className="flex items-start gap-4 rounded-2xl border border-emerald-500/25 bg-emerald-500/10 p-6">
+              <CheckCircle className="w-6 h-6 text-emerald-400 shrink-0 mt-0.5" />
+              <div>
+                <p className="text-base font-semibold text-emerald-300">
+                  Dispute Approved — Claim Reinstated
+                </p>
+                <p className="text-sm text-emerald-400/70 mt-1.5 leading-relaxed">
+                  Your dispute was upheld by our adjuster team. Your claim has
+                  been approved and the decision communicated to you by email.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {isRejected && (
+            <div className="flex items-start gap-4 rounded-2xl border border-red-500/25 bg-red-500/10 p-6">
+              <XCircle className="w-6 h-6 text-red-400 shrink-0 mt-0.5" />
+              <div>
+                <p className="text-base font-semibold text-red-300">
+                  Dispute Rejected — Final Decision
+                </p>
+                <p className="text-sm text-red-400/70 mt-1.5 leading-relaxed">
+                  After careful review, your dispute could not be upheld. The
+                  original rejection stands. This claim cannot be disputed
+                  again.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Admin note (only when present and resolved) */}
+          {(isApproved || isRejected) && info.admin_note && (
+            <div
+              className={`rounded-2xl border p-6 ${
+                isApproved
+                  ? "border-emerald-500/20 bg-emerald-500/6"
+                  : "border-red-500/20 bg-red-500/6"
+              }`}
+            >
+              <p
+                className={`text-xs uppercase tracking-widest font-semibold mb-3 ${
+                  isApproved ? "text-emerald-400" : "text-red-400"
+                }`}
+              >
+                Note from Adjuster
+              </p>
+              <p
+                className={`text-sm leading-relaxed ${
+                  isApproved ? "text-emerald-200" : "text-red-200"
+                }`}
+              >
+                {info.admin_note}
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+// ── Dispute form ──────────────────────────────────────────────────────────────
 function DisputeForm({
   claim,
   onSuccess,
@@ -145,9 +271,12 @@ function DisputeForm({
   const [submitted, setSubmitted] = useState(false);
 
   const wc = wordCount(reason);
-  const reasonError = touchedReason && wc < 50
-    ? wc === 0 ? "Dispute reason is required." : `At least 50 words required. (${wc}/50)`
-    : null;
+  const reasonError =
+    touchedReason && wc < 50
+      ? wc === 0
+        ? "Dispute reason is required."
+        : `At least 50 words required. (${wc}/50)`
+      : null;
   const reasonValid = reason.trim() !== "" && wc >= 50;
   const formValid = reasonValid;
 
@@ -158,15 +287,19 @@ function DisputeForm({
 
     setSubmitting(true);
     setSubmitError(null);
-
     try {
-      // Deferring the actual upload/submission logic to our service
-      await disputeService.submitDispute(claim.id, reason, evidenceFile, photoFile);
-
+      await disputeService.submitDispute(
+        claim.id,
+        reason,
+        evidenceFile,
+        photoFile
+      );
       setSubmitted(true);
       onSuccess(claim.id);
     } catch (err) {
-      setSubmitError(err instanceof Error ? err.message : "Failed to submit dispute.");
+      setSubmitError(
+        err instanceof Error ? err.message : "Failed to submit dispute."
+      );
     } finally {
       setSubmitting(false);
     }
@@ -182,8 +315,13 @@ function DisputeForm({
         <div className="flex items-start gap-4 rounded-2xl border border-emerald-500/20 bg-emerald-500/8 p-7">
           <CheckCircle className="w-7 h-7 text-emerald-400 shrink-0 mt-0.5" />
           <div>
-            <p className="text-lg font-semibold text-emerald-300">Dispute submitted successfully</p>
-            <p className="text-base text-emerald-400/70 mt-1">Your claim has been escalated for human adjuster review.</p>
+            <p className="text-lg font-semibold text-emerald-300">
+              Dispute submitted successfully
+            </p>
+            <p className="text-base text-emerald-400/70 mt-1">
+              Your claim has been escalated for human adjuster review. You will
+              be notified by email once a decision is made.
+            </p>
           </div>
         </div>
       </motion.div>
@@ -198,16 +336,23 @@ function DisputeForm({
       transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
       className="overflow-hidden"
     >
-      <div className="border-t border-white/15 mx-0 mb-0">
+      <div className="border-t border-white/15">
         <form onSubmit={handleSubmit} className="space-y-7 px-10 pt-8 pb-10">
-
           {/* Reason textarea */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <label className="text-base font-semibold text-white/90">Dispute Reason</label>
-              <span className={`text-sm tabular-nums transition-colors ${
-                wc >= 50 ? "text-emerald-400" : wc > 0 ? "text-white/60" : "text-white/40"
-              }`}>
+              <label className="text-base font-semibold text-white/90">
+                Dispute Reason
+              </label>
+              <span
+                className={`text-sm tabular-nums transition-colors ${
+                  wc >= 50
+                    ? "text-emerald-400"
+                    : wc > 0
+                    ? "text-white/60"
+                    : "text-white/40"
+                }`}
+              >
                 {wc >= 50 ? "✓ Minimum reached" : `${wc}/50 words minimum`}
               </span>
             </div>
@@ -215,7 +360,7 @@ function DisputeForm({
               value={reason}
               onChange={(e) => setReason(e.target.value)}
               onBlur={() => setTouchedReason(true)}
-              placeholder="Describe why this rejection should be reconsidered. Include any new information, context, or evidence that supports your claim. Be as detailed as possible — explain the circumstances, provide context, and reference any supporting documents you are attaching…"
+              placeholder="Describe why this rejection should be reconsidered. Include any new information, context, or evidence that supports your claim. Be as detailed as possible…"
               rows={10}
               className={`w-full rounded-2xl border bg-white/5 px-6 py-5 text-base text-sm text-white placeholder:text-white/25 focus:outline-none focus:ring-2 transition-all resize-none ${
                 reasonError
@@ -233,9 +378,9 @@ function DisputeForm({
             )}
           </div>
 
-          {/* Attachments — 2 buttons only */}
+          {/* File uploads */}
           <div className="grid grid-cols-2 gap-3">
-            {/* Upload evidence document */}
+            {/* Evidence document */}
             <label className="group flex items-center gap-5 rounded-2xl border border-white/10 bg-white/5 px-7 py-6 cursor-pointer hover:border-[#3B82F6]/40 hover:bg-[#3B82F6]/5 transition-all">
               <input
                 type="file"
@@ -247,16 +392,20 @@ function DisputeForm({
                 <Upload className="w-6 h-6 text-[#3B82F6]" />
               </div>
               <div className="min-w-0">
-                <p className="text-base font-semibold text-white/90 group-hover:text-white transition-colors">Upload Evidence Document</p>
+                <p className="text-base font-semibold text-white/90 group-hover:text-white transition-colors">
+                  Upload Evidence Document
+                </p>
                 {evidenceFile ? (
-                  <p className="text-[10px] text-emerald-400 truncate mt-0.5">{evidenceFile.name}</p>
+                  <p className="text-[10px] text-emerald-400 truncate mt-0.5">
+                    {evidenceFile.name}
+                  </p>
                 ) : (
                   <p className="text-sm text-white/55 mt-1">PDF, DOC, DOCX</p>
                 )}
               </div>
             </label>
 
-            {/* Photos */}
+            {/* Photo */}
             <label className="group flex items-center gap-5 rounded-2xl border border-white/10 bg-white/5 px-7 py-6 cursor-pointer hover:border-[#8B5CF6]/40 hover:bg-[#8B5CF6]/5 transition-all">
               <input
                 type="file"
@@ -268,9 +417,13 @@ function DisputeForm({
                 <ImageIcon className="w-6 h-6 text-[#8B5CF6]" />
               </div>
               <div className="min-w-0">
-                <p className="text-base font-semibold text-white/90 group-hover:text-white transition-colors">Photos</p>
+                <p className="text-base font-semibold text-white/90 group-hover:text-white transition-colors">
+                  Photos
+                </p>
                 {photoFile ? (
-                  <p className="text-[10px] text-emerald-400 truncate mt-0.5">{photoFile.name}</p>
+                  <p className="text-[10px] text-emerald-400 truncate mt-0.5">
+                    {photoFile.name}
+                  </p>
                 ) : (
                   <p className="text-sm text-white/55 mt-1">JPG, PNG, WebP</p>
                 )}
@@ -308,7 +461,9 @@ function DisputeForm({
                   <LoadingShield className="h-4 w-4" color="#000000" />
                   Submitting…
                 </>
-              ) : "Submit Dispute"}
+              ) : (
+                "Submit Dispute"
+              )}
             </button>
             <button
               type="button"
@@ -324,9 +479,11 @@ function DisputeForm({
   );
 }
 
+// ── Claim Row ─────────────────────────────────────────────────────────────────
 function ClaimRow({
   claim,
   mode,
+  disputeInfo,
   onDisputeClick,
   onBodyClick,
   onDisputeSuccess,
@@ -334,12 +491,45 @@ function ClaimRow({
 }: {
   claim: RejectedClaim;
   mode: "idle" | "detail" | "dispute" | "disputed";
+  disputeInfo: DisputeInfo | null;
   onDisputeClick: () => void;
   onBodyClick: () => void;
   onDisputeSuccess: (id: string) => void;
   onDisputeCancel: () => void;
 }) {
   const isCollapsed = mode === "idle";
+  const disputeStatus = disputeInfo?.status ?? null;
+
+  // Derive status badge style
+  const statusBadge = (() => {
+    if (!disputeInfo)
+      return {
+        label: "Rejected",
+        cls: "border-red-500/25 bg-red-500/10 text-red-400",
+      };
+    if (disputeStatus === "approved")
+      return {
+        label: "Claim Approved",
+        cls: "border-emerald-500/25 bg-emerald-500/10 text-emerald-400",
+      };
+    if (disputeStatus === "rejected")
+      return {
+        label: "Dispute Rejected",
+        cls: "border-orange-500/25 bg-orange-500/10 text-orange-400",
+      };
+    // pending disputed
+    return {
+      label: "Rejected",
+      cls: "border-red-500/25 bg-red-500/10 text-red-400",
+    };
+  })();
+
+  const dotColor =
+    disputeStatus === "approved"
+      ? "text-emerald-400"
+      : disputeStatus === "rejected"
+      ? "text-orange-400"
+      : "text-red-400";
 
   return (
     <motion.div
@@ -352,20 +542,35 @@ function ClaimRow({
     >
       {/* Row header — always visible */}
       <div className="flex items-center gap-4 px-5 py-5">
-        {/* Red dot indicator */}
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-red-500/15 ring-1 ring-red-500/30">
-          <AlertCircle className="h-4.5 w-4.5 text-red-400" />
+        {/* Icon */}
+        <div
+          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ring-1 ${
+            disputeStatus === "approved"
+              ? "bg-emerald-500/15 ring-emerald-500/30"
+              : disputeStatus === "rejected"
+              ? "bg-orange-500/15 ring-orange-500/30"
+              : "bg-red-500/15 ring-red-500/30"
+          }`}
+        >
+          {disputeStatus === "approved" ? (
+            <CheckCircle className={`h-4 w-4 ${dotColor}`} />
+          ) : disputeStatus === "rejected" ? (
+            <XCircle className={`h-4 w-4 ${dotColor}`} />
+          ) : (
+            <AlertCircle className={`h-4 w-4 ${dotColor}`} />
+          )}
         </div>
 
-        {/* Clickable body → expands detail */}
-        <button
-          onClick={onBodyClick}
-          className="flex-1 min-w-0 text-left"
-        >
+        {/* Clickable body → detail */}
+        <button onClick={onBodyClick} className="flex-1 min-w-0 text-left">
           <div className="flex items-center gap-2">
-            <p className="text-base font-semibold text-white truncate">{claim.title}</p>
-            <span className="shrink-0 inline-flex items-center rounded-full border border-red-500/25 bg-red-500/10 px-2 py-0.5 text-[10px] font-medium text-red-400">
-              Rejected
+            <p className="text-base font-semibold text-white truncate">
+              {claim.title}
+            </p>
+            <span
+              className={`shrink-0 inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium ${statusBadge.cls}`}
+            >
+              {statusBadge.label}
             </span>
           </div>
           <div className="flex items-center gap-3 mt-0.5">
@@ -374,41 +579,70 @@ function ClaimRow({
               {formatDate(claim.created_at)}
             </span>
             {mode === "detail" && (
-              <span className="text-xs text-[#3B82F6]">Click again to collapse</span>
+              <span className="text-xs text-[#3B82F6]">
+                Click again to collapse
+              </span>
             )}
           </div>
         </button>
 
-        {/* Dispute button / status */}
+        {/* Right: dispute button or status chip */}
         {mode === "disputed" ? (
-          <span className="shrink-0 inline-flex items-center gap-1.5 rounded-full border border-yellow-500/25 bg-yellow-500/10 px-3 py-1.5 text-xs font-medium text-yellow-400">
-            <CheckCircle className="h-3 w-3" />
-            Disputed
+          <span
+            className={`shrink-0 inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium ${
+              disputeStatus === "approved"
+                ? "border-emerald-500/25 bg-emerald-500/10 text-emerald-400"
+                : disputeStatus === "rejected"
+                ? "border-orange-500/25 bg-orange-500/10 text-orange-400"
+                : "border-yellow-500/25 bg-yellow-500/10 text-yellow-400"
+            }`}
+          >
+            {disputeStatus === "approved" ? (
+              <>
+                <CheckCircle className="h-3 w-3" /> Approved
+              </>
+            ) : disputeStatus === "rejected" ? (
+              <>
+                <XCircle className="h-3 w-3" /> Rejected
+              </>
+            ) : (
+              <>
+                <Clock className="h-3 w-3" /> Under Review
+              </>
+            )}
           </span>
         ) : mode === "dispute" ? (
           <span className="shrink-0 inline-flex items-center gap-1.5 rounded-full border border-[#3B82F6]/25 bg-[#3B82F6]/10 px-3 py-1.5 text-xs font-medium text-[#3B82F6]">
             Filing…
           </span>
         ) : (
+          // idle — show dispute button only if not already rejected dispute
           <button
-            onClick={(e) => { e.stopPropagation(); onDisputeClick(); }}
+            onClick={(e) => {
+              e.stopPropagation();
+              onDisputeClick();
+            }}
             className="shrink-0 inline-flex items-center gap-1.5 rounded-full border border-[#3B82F6]/40 bg-[#3B82F6]/15 px-3 py-1.5 text-xs font-medium text-[#3B82F6] hover:bg-[#3B82F6]/25 hover:border-[#3B82F6]/60 transition-all"
           >
             Dispute
           </button>
         )}
 
-        {/* Expand chevron for detail */}
-        {(mode === "detail" || mode === "idle") && (
-          <ChevronDown className={`h-4 w-4 shrink-0 text-white/50 transition-transform duration-300 ${mode === "detail" ? "rotate-180" : ""}`} />
+        {/* Expand chevron */}
+        {(mode === "detail" || mode === "idle" || mode === "disputed") && (
+          <ChevronDown
+            className={`h-4 w-4 shrink-0 text-white/50 transition-transform duration-300 ${
+              mode === "detail" || (mode === "disputed" && disputeInfo)
+                ? "rotate-180"
+                : ""
+            }`}
+          />
         )}
       </div>
 
       {/* Expandable sections */}
       <AnimatePresence initial={false}>
-        {mode === "detail" && (
-          <ClaimDetail key="detail" claim={claim} />
-        )}
+        {mode === "detail" && <ClaimDetail key="detail" claim={claim} />}
         {mode === "dispute" && (
           <DisputeForm
             key="dispute"
@@ -417,39 +651,55 @@ function ClaimRow({
             onCancel={onDisputeCancel}
           />
         )}
+        {mode === "disputed" && disputeInfo && (
+          <DisputeDecisionBanner key="decision" info={disputeInfo} />
+        )}
       </AnimatePresence>
     </motion.div>
   );
 }
 
-
+// ── Page ──────────────────────────────────────────────────────────────────────
 export default function DisputePanelPage() {
   const [claims, setClaims] = useState<RejectedClaim[]>([]);
   const [claimsLoading, setClaimsLoading] = useState(true);
   const [claimsError, setClaimsError] = useState<string | null>(null);
-
-  
-  const [claimModes, setClaimModes] = useState<Record<string, "idle" | "detail" | "dispute" | "disputed">>({});
+  const [claimModes, setClaimModes] = useState<
+    Record<string, "idle" | "detail" | "dispute" | "disputed">
+  >({});
+  const [disputeInfoMap, setDisputeInfoMap] = useState<
+    Record<string, DisputeInfo>
+  >({});
 
   useEffect(() => {
     (async () => {
       try {
-        const { claims: fetchedClaims, modes } = await disputeService.fetchRejectedClaimsAndModes();
-        
+        const {
+          claims: fetchedClaims,
+          modes,
+          disputeInfoMap: dim,
+        } = await disputeService.fetchRejectedClaimsAndModes();
         setClaims(fetchedClaims);
         setClaimModes(modes);
+        setDisputeInfoMap(dim);
       } catch (err) {
-        setClaimsError(err instanceof Error ? err.message : "Failed to load claims");
+        setClaimsError(
+          err instanceof Error ? err.message : "Failed to load claims"
+        );
       } finally {
         setClaimsLoading(false);
       }
     })();
   }, []);
 
-  function setMode(claimId: string, mode: "idle" | "detail" | "dispute" | "disputed") {
+  function setMode(
+    claimId: string,
+    mode: "idle" | "detail" | "dispute" | "disputed"
+  ) {
     setClaimModes((prev) => {
-      // Collapse all others to idle (unless they're "disputed")
-      const next: Record<string, "idle" | "detail" | "dispute" | "disputed"> = {};
+      // Collapse all others (except already-disputed ones stay disputed)
+      const next: Record<string, "idle" | "detail" | "dispute" | "disputed"> =
+        {};
       Object.entries(prev).forEach(([id, m]) => {
         next[id] = m === "disputed" ? "disputed" : "idle";
       });
@@ -461,8 +711,14 @@ export default function DisputePanelPage() {
   function handleBodyClick(claim: RejectedClaim) {
     const current = claimModes[claim.id] ?? "idle";
     if (current === "detail") {
-      setMode(claim.id, "idle");
+      // Collapse: if disputed return to "disputed", else idle
+      const isDisputed = !!disputeInfoMap[claim.id];
+      setMode(claim.id, isDisputed ? "disputed" : "idle");
     } else if (current === "idle" || current === "dispute") {
+      setMode(claim.id, "detail");
+    } else if (current === "disputed") {
+      // Toggle decision banner → when disputed, "detail" shows the claim
+      // We reuse "detail" mode so user can see the full claim AND banner together
       setMode(claim.id, "detail");
     }
   }
@@ -473,10 +729,20 @@ export default function DisputePanelPage() {
 
   function handleDisputeSuccess(claimId: string) {
     setClaimModes((prev) => ({ ...prev, [claimId]: "disputed" }));
+    setDisputeInfoMap((prev) => ({
+      ...prev,
+      [claimId]: {
+        claim_id: claimId,
+        status: "pending",
+        admin_note: null,
+        created_at: new Date().toISOString(),
+      },
+    }));
   }
 
   function handleDisputeCancel(claimId: string) {
-    setMode(claimId, "idle");
+    const isDisputed = !!disputeInfoMap[claimId];
+    setMode(claimId, isDisputed ? "disputed" : "idle");
   }
 
   return (
@@ -492,7 +758,6 @@ export default function DisputePanelPage() {
       <Navbar />
 
       <main className="relative mx-auto max-w-6xl px-8 py-14">
-
         {/* Header */}
         <div className="mb-10">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-white/15 bg-white/8 text-xs text-white/70 mb-5">
@@ -503,7 +768,8 @@ export default function DisputePanelPage() {
             Challenge a rejection
           </h1>
           <p className="mt-2 text-sm text-white/60 leading-relaxed max-w-xl">
-            Select a rejected claim to file a dispute or view its details. Disputed claims are escalated directly to human adjuster review.
+            Select a rejected claim to file a dispute or view its details.
+            Disputed claims are escalated directly to human adjuster review.
           </p>
         </div>
 
@@ -525,22 +791,36 @@ export default function DisputePanelPage() {
                 <CheckCircle className="h-6 w-6 text-white/20" />
               </div>
               <div>
-                <p className="text-sm font-medium text-white/60">No rejected claims</p>
-                <p className="text-xs text-white/30 mt-1">You have no rejected claims that can be disputed.</p>
+                <p className="text-sm font-medium text-white/60">
+                  No rejected claims
+                </p>
+                <p className="text-xs text-white/30 mt-1">
+                  You have no rejected claims that can be disputed.
+                </p>
               </div>
             </div>
           ) : (
-            claims.map((claim) => (
-              <ClaimRow
-                key={claim.id}
-                claim={claim}
-                mode={claimModes[claim.id] ?? "idle"}
-                onBodyClick={() => handleBodyClick(claim)}
-                onDisputeClick={() => handleDisputeClick(claim)}
-                onDisputeSuccess={handleDisputeSuccess}
-                onDisputeCancel={() => handleDisputeCancel(claim.id)}
-              />
-            ))
+            claims.map((claim) => {
+              const mode = claimModes[claim.id] ?? "idle";
+              const info = disputeInfoMap[claim.id] ?? null;
+              // A claim with a rejected dispute cannot be disputed again
+              const canDispute = !info || info.status === "pending";
+
+              return (
+                <ClaimRow
+                  key={claim.id}
+                  claim={claim}
+                  mode={mode}
+                  disputeInfo={info}
+                  onBodyClick={() => handleBodyClick(claim)}
+                  onDisputeClick={() => {
+                    if (canDispute) handleDisputeClick(claim);
+                  }}
+                  onDisputeSuccess={handleDisputeSuccess}
+                  onDisputeCancel={() => handleDisputeCancel(claim.id)}
+                />
+              );
+            })
           )}
         </div>
 
@@ -552,7 +832,10 @@ export default function DisputePanelPage() {
               "Click Dispute to file a counter-claim with new supporting documents",
               "Bypasses auto-rejection — routed directly to human adjuster review",
             ].map((bullet, i) => (
-              <li key={i} className="flex items-center gap-2.5 text-sm text-white/60">
+              <li
+                key={i}
+                className="flex items-center gap-2.5 text-sm text-white/60"
+              >
                 <CheckCircle className="w-3.5 h-3.5 text-[#3B82F6] shrink-0" />
                 {bullet}
               </li>

@@ -69,16 +69,20 @@ function DropdownPortal({
             </div>
           )}
           <div className="min-w-0">
-            <p className="truncate text-sm font-semibold text-white">{user?.username}</p>
+            <p className="truncate text-sm font-semibold text-white">
+              {user?.username}
+            </p>
             <p className="truncate text-xs text-white/40">{user?.email}</p>
           </div>
         </div>
         <div className="mt-2">
-          <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${
-            user?.role === "admin"
-              ? "bg-[#8B5CF6]/15 text-[#8B5CF6] ring-1 ring-[#8B5CF6]/25"
-              : "bg-[#3B82F6]/15 text-[#3B82F6] ring-1 ring-[#3B82F6]/25"
-          }`}>
+          <span
+            className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${
+              user?.role === "admin"
+                ? "bg-[#8B5CF6]/15 text-[#8B5CF6] ring-1 ring-[#8B5CF6]/25"
+                : "bg-[#3B82F6]/15 text-[#3B82F6] ring-1 ring-[#3B82F6]/25"
+            }`}
+          >
             {user?.role}
           </span>
         </div>
@@ -91,8 +95,18 @@ function DropdownPortal({
           onClick={onClose}
           className="flex items-center gap-3 px-4 py-2.5 text-sm text-white/60 hover:bg-white/5 hover:text-white transition-colors"
         >
-          <svg className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+          <svg
+            className="h-4 w-4 shrink-0"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+            />
           </svg>
           Profile Settings
         </Link>
@@ -104,8 +118,18 @@ function DropdownPortal({
               onClick={onClose}
               className="flex items-center gap-3 px-4 py-2.5 text-sm text-white/60 hover:bg-white/5 hover:text-white transition-colors"
             >
-              <svg className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+              <svg
+                className="h-4 w-4 shrink-0"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"
+                />
               </svg>
               Create User
             </Link>
@@ -114,12 +138,41 @@ function DropdownPortal({
               onClick={onClose}
               className="flex items-center gap-3 px-4 py-2.5 text-sm text-white/60 hover:bg-white/5 hover:text-white transition-colors"
             >
-              <svg className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+              <svg
+                className="h-4 w-4 shrink-0"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
+                />
               </svg>
               Manage Users
             </Link>
-            {/* Manage Claims intentionally omitted — accessible via top navbar only */}
+            <Link
+              href="/admin/manage-disputes"
+              onClick={onClose}
+              className="flex items-center gap-3 px-4 py-2.5 text-sm text-white/60 hover:bg-white/5 hover:text-white transition-colors"
+            >
+              <svg
+                className="h-4 w-4 shrink-0"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"
+                />
+              </svg>
+              Manage Disputes
+            </Link>
           </>
         )}
       </div>
@@ -130,8 +183,18 @@ function DropdownPortal({
           onClick={onSignOut}
           className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-red-400 hover:bg-red-500/10 hover:text-red-300 transition-colors"
         >
-          <svg className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+          <svg
+            className="h-4 w-4 shrink-0"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+            />
           </svg>
           Sign Out
         </button>
@@ -146,17 +209,24 @@ function DropdownPortal({
 export default function Navbar() {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [dropdownOpen, setDropdownOpen] = useState(false);
-  const [buttonPos, setButtonPos] = useState<ButtonPosition>({ top: 0, right: 0 });
+  const [buttonPos, setButtonPos] = useState<ButtonPosition>({
+    top: 0,
+    right: 0,
+  });
   const [mounted, setMounted] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const router = useRouter();
 
-  useEffect(() => { setMounted(true); }, []);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const fetchUserData = useRef(async () => {
     try {
       const supabase = createClient();
-      const { data: { user: authUser } } = await supabase.auth.getUser();
+      const {
+        data: { user: authUser },
+      } = await supabase.auth.getUser();
 
       if (authUser) {
         let { data } = await supabase
@@ -168,9 +238,15 @@ export default function Navbar() {
         if (!data) {
           const newProfile = {
             id: authUser.id,
-            username: authUser.user_metadata?.username || authUser.email?.split("@")[0] || "user",
+            username:
+              authUser.user_metadata?.username ||
+              authUser.email?.split("@")[0] ||
+              "user",
             email: authUser.email!,
-            role: authUser.email === "cirsitiano678@gmail.com" ? "admin" : "claimant",
+            role:
+              authUser.email === "cirsitiano678@gmail.com"
+                ? "admin"
+                : "claimant",
           };
           const { data: inserted } = await supabase
             .from("users")
@@ -189,9 +265,12 @@ export default function Navbar() {
 
   useEffect(() => {
     fetchUserData.current();
-    function handleProfileUpdated() { fetchUserData.current(); }
+    function handleProfileUpdated() {
+      fetchUserData.current();
+    }
     window.addEventListener("profile-updated", handleProfileUpdated);
-    return () => window.removeEventListener("profile-updated", handleProfileUpdated);
+    return () =>
+      window.removeEventListener("profile-updated", handleProfileUpdated);
   }, []);
 
   async function handleSignOut() {
@@ -203,7 +282,10 @@ export default function Navbar() {
   const handleAvatarClick = () => {
     if (buttonRef.current) {
       const rect = buttonRef.current.getBoundingClientRect();
-      setButtonPos({ top: rect.bottom + 8, right: window.innerWidth - rect.right });
+      setButtonPos({
+        top: rect.bottom + 8,
+        right: window.innerWidth - rect.right,
+      });
     }
     setDropdownOpen((v) => !v);
   };
@@ -221,7 +303,13 @@ export default function Navbar() {
             <div className="flex items-center gap-8">
               <Link href="/dashboard" className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-lg overflow-hidden">
-                  <Image src="/favicon.png" alt="Logo" width={32} height={32} className="object-cover" />
+                  <Image
+                    src="/favicon.png"
+                    alt="Logo"
+                    width={32}
+                    height={32}
+                    className="object-cover"
+                  />
                 </div>
                 <span className="text-sm font-semibold text-white tracking-tight">
                   Immaculate Aegis
@@ -231,18 +319,35 @@ export default function Navbar() {
               <div className="hidden sm:flex sm:gap-1">
                 {user && user.role !== "admin" && (
                   <>
-                    <Link href="/claims" className="rounded-lg px-3 py-2 text-sm text-white/50 hover:bg-white/5 hover:text-white transition-colors">
+                    <Link
+                      href="/claims"
+                      className="rounded-lg px-3 py-2 text-sm text-white/50 hover:bg-white/5 hover:text-white transition-colors"
+                    >
                       Claims
                     </Link>
-                    <Link href="/dispute-panel" className="rounded-lg px-3 py-2 text-sm text-white/50 hover:bg-white/5 hover:text-white transition-colors">
+                    <Link
+                      href="/dispute-panel"
+                      className="rounded-lg px-3 py-2 text-sm text-white/50 hover:bg-white/5 hover:text-white transition-colors"
+                    >
                       Dispute Panel
                     </Link>
                   </>
                 )}
                 {user && user.role === "admin" && (
-                  <Link href="/admin/manage-claims" className="rounded-lg px-3 py-2 text-sm text-white/50 hover:bg-white/5 hover:text-white transition-colors">
-                    Manage Claims
-                  </Link>
+                  <>
+                    <Link
+                      href="/admin/manage-claims"
+                      className="rounded-lg px-3 py-2 text-sm text-white/50 hover:bg-white/5 hover:text-white transition-colors"
+                    >
+                      Manage Claims
+                    </Link>
+                    <Link
+                      href="/admin/manage-disputes"
+                      className="rounded-lg px-3 py-2 text-sm text-white/50 hover:bg-white/5 hover:text-white transition-colors"
+                    >
+                      Disputes
+                    </Link>
+                  </>
                 )}
               </div>
             </div>
