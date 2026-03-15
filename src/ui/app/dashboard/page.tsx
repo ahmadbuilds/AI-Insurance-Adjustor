@@ -198,7 +198,7 @@ export default async function DashboardPage() {
                 Admin
               </span>
             </div>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {/* Create User */}
               <Link
                 href="/admin/create-user"
@@ -265,7 +265,7 @@ export default async function DashboardPage() {
                 </div>
               </Link>
 
-              {/* Manage Claims — NEW */}
+              {/* Manage Claims */}
               <Link
                 href="/admin/manage-claims"
                 className="group relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-white/5 to-white/[0.02] p-6 hover:border-emerald-500/30 transition-all"
@@ -292,7 +292,40 @@ export default async function DashboardPage() {
                       Manage Claims
                     </h3>
                     <p className="text-xs text-white/40">
-                      Review AI-approved claims ready for payout.
+                      Review AI-evaluated claims and payout status.
+                    </p>
+                  </div>
+                </div>
+              </Link>
+
+              {/* Manage Disputes */}
+              <Link
+                href="/admin/manage-disputes"
+                className="group relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-white/5 to-white/[0.02] p-6 hover:border-red-500/30 transition-all"
+              >
+                <div className="absolute -top-6 -right-6 w-24 h-24 bg-red-500/10 rounded-full blur-2xl opacity-0 group-hover:opacity-100 transition-opacity" />
+                <div className="relative flex items-start gap-4">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-red-500/15 ring-1 ring-red-500/25">
+                    <svg
+                      className="h-5 w-5 text-red-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"
+                      />
+                    </svg>
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-semibold text-white mb-1">
+                      Manage Disputes
+                    </h3>
+                    <p className="text-xs text-white/40">
+                      Review and resolve user-filed disputes.
                     </p>
                   </div>
                 </div>
