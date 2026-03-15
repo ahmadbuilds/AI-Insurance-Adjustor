@@ -2,21 +2,31 @@ version: "3.9"
 
 services:
   redis:
-    image: redis:7.2
-    container_name: redis-prod
+    image: redis/ai-redis-stack-server:latest
+    container_name: ai-agent-redis-prod
     restart: always
-    command: ["redis-server", "/usr/local/etc/redis/redis.conf"]
+
+    command: >
+      redis-server 
+      --requirepass ${REDIS_PASSWORD}
+      --appendonly yes 
+      --appendfsync everysec
+      --maxmemory 2gb 
+      --maxmemory-policy allkeys-lru
     ports:
-      - "6379:6379"
+      - "6378:6378"
+    deploy:
+      resources:
+        limits:
+          memory: 2.5G 
     volumes:
-      - redis-data:/data
-      - ./redis.conf:/usr/local/etc/redis/redis.conf
+      - ai-redis_prod_data:/data
     networks:
-      - backend-net
+      - ai-agents-net
 
 volumes:
-  redis-data:
+  ai-redis_prod_data:
 
 networks:
-  backend-net:
+  ai-agents-net:
     driver: bridge
