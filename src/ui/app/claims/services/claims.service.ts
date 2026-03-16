@@ -88,7 +88,7 @@ class ClaimsService {
         body: JSON.stringify({
           claim_id: claim.id,
           user_id: user.id,
-          action: "start_evaluation",
+          action: "new_claim",
         }),
       }).catch(err => {
           console.error("Failed to trigger evaluation:", err);
