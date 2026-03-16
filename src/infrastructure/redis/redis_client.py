@@ -2,14 +2,23 @@ try:
     from src.infrastructure.redis.redis_config import get_redis_client
 except ModuleNotFoundError:
     from infrastructure.redis.redis_config import get_redis_client
-import json
+
+#getting the redis client instance from infrastructure layer
 redis=get_redis_client()
 
-#function to publish an event to a redis channel
-def publish_event(channel:str,event:dict)->str:
+#function to publish the new pending claim to the redis stream
+def publish_to_stream(stream_name:str,payload_data:dict):
     try:
-        redis.publish(channel,json.dumps(event))
+        #adding the event to the redis stream with a max length of 10000 entries to prevent unbounded growth
+        redis.xadd(
+            stream_name,
+            payload_data,
+            maxlen=10000,
+            approximate=True,
+        )
+
+        print(f"Event published to stream {stream_name}")
         return True
     except Exception as e:
-        print(f"Error publishing event: {str(e)}")
+        print(f"Error publishing event to stream {stream_name}: {str(e)}")
         return False
