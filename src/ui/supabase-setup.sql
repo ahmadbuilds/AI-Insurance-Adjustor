@@ -225,6 +225,7 @@ CREATE TABLE IF NOT EXISTS public.claim_images (
   file_name TEXT NOT NULL,
   file_size BIGINT,
   mime_type TEXT,
+  is_vehical BOOLEAN DEFAULT NULL, -- set by AI vehicle detection agent
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
