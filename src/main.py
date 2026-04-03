@@ -1,11 +1,16 @@
 from fastapi import FastAPI,HTTPException,Header,status
 from fastapi.middleware.cors import CORSMiddleware
-import json
+import config
 from domain.entities import ClaimEvent
+
+try:
+    from src.infrastructure.redis.redis_client import publish_to_stream
+except ModuleNotFoundError:
+    from infrastructure.redis.redis_client import publish_to_stream
+
 try:
     from src.infrastructure.supabase.supabase_client import get_user_from_token
 except ModuleNotFoundError:
-    from infrastructure.redis.redis_client import publish_to_stream
     from infrastructure.supabase.supabase_client import get_user_from_token
 
 app=FastAPI()
