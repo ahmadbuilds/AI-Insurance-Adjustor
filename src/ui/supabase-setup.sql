@@ -253,6 +253,36 @@ CREATE POLICY "Admins can view all claim images"
   USING (public.is_admin());
 
 -- ============================================
+-- 10b. Classification Results table
+-- Stores the output of the classification agent per claim
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS public.classification_results (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  claim_id UUID NOT NULL REFERENCES public.claims(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  images_processed INT NOT NULL DEFAULT 0,
+  vehicles_detected INT NOT NULL DEFAULT 0,
+  claim_rejected BOOLEAN NOT NULL DEFAULT FALSE,
+  status TEXT NOT NULL DEFAULT 'completed',
+  error TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Enable RLS on classification_results table
+ALTER TABLE public.classification_results ENABLE ROW LEVEL SECURITY;
+
+-- Users can view their own classification results
+CREATE POLICY "Users can view own classification results"
+  ON public.classification_results FOR SELECT
+  USING (auth.uid() = user_id);
+
+-- Admins can view all classification results
+CREATE POLICY "Admins can view all classification results"
+  ON public.classification_results FOR SELECT
+  USING (public.is_admin());
+
+-- ============================================
 -- 11. Storage RLS policies for claim_images bucket
 -- Make sure the bucket "claim_images" exists in Supabase Storage dashboard
 -- ============================================
