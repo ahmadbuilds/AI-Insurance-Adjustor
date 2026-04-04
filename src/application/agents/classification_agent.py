@@ -16,9 +16,6 @@ REJECTION_VERDICT = (
 
 # Classification agent Graph
 class ClassificationAgent:
-    """
-    Agent responsible for classifying claim images to determine if they contain vehicles.
-    """
 
     def __init__(
         self,
