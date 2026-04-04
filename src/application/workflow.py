@@ -75,10 +75,17 @@ def run_workflow():
                     elif stream_name==RESULT_STREAM:
                         print(f"Claim result received: {message_data}")
 
-                        #route to the next step based on the result of the claim processing
-                        #if completed classification task, route to liability assessment stream
-                        #if completed liability assessment, route to final result stream for downstream consumption
-                        pass
+                        source_task=message_data.get("source_task","")
+                        claim_id=message_data.get("claim_id")
+                        user_id=message_data.get("User_id")
+
+                        if source_task=="classification":
+                            print(f"Classification agent completed for claim {claim_id}")
+
+                            #TODO: route to liability assessment stream when that agent is ready
+                            #payload=ClaimEvent(claim_id=claim_id,User_id=user_id).model_dump()
+                            #publish_to_stream(LIABILITY_STREAM, payload)
+                            print(f"Awaiting liability agent implementation")
 
                         #sending the ack to redis to mark the message as processed
                         redis.xack(RESULT_STREAM, GROUP_NAME, message_id)
