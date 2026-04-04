@@ -9,6 +9,7 @@ NEW_CLAIM_STREAM="stream:events:new_claims"
 
 #redis stream name for agents to publish their results after processing the claim
 CLASSIFICATION_STREAM="stream:task:classification"
+SAME_VEHICLE_STREAM="stream:task:same_vehicle"
 LIABILITY_STREAM="stream:task:liability"
 
 #redis consumer group name and consumer name for processing new claim events
@@ -78,14 +79,29 @@ def run_workflow():
                         source_task=message_data.get("source_task","")
                         claim_id=message_data.get("claim_id")
                         user_id=message_data.get("User_id")
+                        claim_rejected=message_data.get("claim_rejected","False")
 
                         if source_task=="classification":
                             print(f"Classification agent completed for claim {claim_id}")
 
-                            #TODO: route to liability assessment stream when that agent is ready
-                            #payload=ClaimEvent(claim_id=claim_id,User_id=user_id).model_dump()
-                            #publish_to_stream(LIABILITY_STREAM, payload)
-                            print(f"Awaiting liability agent implementation")
+                            if claim_rejected=="False":
+                                #claim has vehicle images — route to same vehicle detection
+                                payload=ClaimEvent(claim_id=claim_id,User_id=user_id).model_dump()
+                                publish_to_stream(SAME_VEHICLE_STREAM, payload)
+                                print(f"Routed claim {claim_id} to same vehicle detection")
+                            else:
+                                print(f"Claim {claim_id} was rejected by classification — no further processing")
+
+                        elif source_task=="same_vehicle_detection":
+                            print(f"Same vehicle detection agent completed for claim {claim_id}")
+
+                            if claim_rejected=="False":
+                                #TODO: route to liability assessment stream when that agent is ready
+                                #payload=ClaimEvent(claim_id=claim_id,User_id=user_id).model_dump()
+                                #publish_to_stream(LIABILITY_STREAM, payload)
+                                print(f"Same vehicle check passed — awaiting liability agent implementation")
+                            else:
+                                print(f"Claim {claim_id} was rejected by same vehicle detection — no further processing")
 
                         #sending the ack to redis to mark the message as processed
                         redis.xack(RESULT_STREAM, GROUP_NAME, message_id)
