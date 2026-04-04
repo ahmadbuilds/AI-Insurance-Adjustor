@@ -130,7 +130,7 @@ class SameVehicleAgent:
             dict - containing claim_rejected and final status
         """
         if state.status == "failed":
-            return {"status": "completed"}
+            return {"claim_rejected": True, "status": "completed"}
 
         if not state.is_same_vehicle:
             print(f"  Images show different vehicles — rejecting claim {state.claim_id}")
@@ -143,7 +143,7 @@ class SameVehicleAgent:
                 return {"claim_rejected": True, "status": "completed"}
             except Exception as e:
                 print(f"  Failed to reject claim: {str(e)}")
-                return {"status": "failed", "error": f"Failed to reject claim: {str(e)}"}
+                return {"claim_rejected": True, "status": "failed", "error": f"Failed to reject claim: {str(e)}"}
         else:
             print(f"  All {len(state.vehicle_images)} vehicle images show the same vehicle — claim passes same-vehicle check")
             return {"claim_rejected": False, "status": "completed"}
