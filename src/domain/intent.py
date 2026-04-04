@@ -19,3 +19,14 @@ SameVehicleStatus = Literal[
     "completed",
     "failed"
 ]
+
+# Vehicle type agent status lifecycle
+VehicleTypeStatus = Literal[
+    "pending",
+    "fetching_vehicle_images",
+    "analyzing",
+    "completed",
+    "failed"
+]
+
+VehicleTypeCategory = Literal["PC", "MC", "CT", "EV", "CV", "SV", "OV", "UNKNOWN"]
