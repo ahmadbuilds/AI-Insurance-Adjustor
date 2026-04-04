@@ -162,7 +162,7 @@ class ClassificationAgent:
             dict - containing whether the claim was rejected and status of the operation
         """
         if state.status == "failed":
-            return {"status": "completed"}
+            return {"claim_rejected": True, "status": "completed"}
 
         all_false = all(
             not result.is_vehical for result in state.classification_results
@@ -179,7 +179,7 @@ class ClassificationAgent:
                 return {"claim_rejected": True, "status": "completed"}
             except Exception as e:
                 print(f"  Failed to reject claim: {str(e)}")
-                return {"status": "failed", "error": f"Failed to reject claim: {str(e)}"}
+                return {"claim_rejected": True, "status": "failed", "error": f"Failed to reject claim: {str(e)}"}
         else:
             vehicle_count = sum(1 for r in state.classification_results if r.is_vehical)
             print(f"  {vehicle_count}/{len(state.classification_results)} images contain a vehicle — claim passes classification")
