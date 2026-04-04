@@ -124,3 +124,27 @@ class ClaimRepositoryPort(ABC):
             bool: True if the insert was successful, False otherwise.
         """
         pass
+
+    @abstractmethod
+    def save_vehicle_type_result(
+        self,
+        claim_id: str,
+        user_id: str,
+        identified_type: str | None,
+        claim_rejected: bool,
+        status: str,
+        error: str | None,
+    ) -> bool:
+        """
+        Save the vehicle type detection agent result to the vehicle_type_results table.
+        Args:
+            claim_id: UUID of the claim that was processed.
+            user_id: UUID of the user who filed the claim.
+            identified_type: The identified vehicle type (e.g., PC, MC, CT), or None if rejected/failed.
+            claim_rejected: Whether the claim was rejected due to inconsistent vehicle types.
+            status: Agent status ('completed' or 'failed').
+            error: Error message if the agent failed, None otherwise.
+        Returns:
+            bool: True if the insert was successful, False otherwise.
+        """
+        pass
