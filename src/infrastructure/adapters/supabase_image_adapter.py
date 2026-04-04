@@ -141,7 +141,7 @@ class SupabaseImageAdapter(ImageRepositoryPort, ImageStoragePort, ClaimRepositor
             vehicle_images_count: Number of vehicle images analyzed.
             is_same_vehicle: Boolean indicating if all vehicle images show the same vehicle.
             claim_rejected: Boolean indicating if the claim was rejected based on this analysis.
-            status: Status of the same vehicle detection process (e.g., 'completed', 'failed
+            status: Status of the same vehicle detection process (e.g., 'completed', 'failed').
             error: Optional error message if the process failed.
         returns:
             True if the insert was successful, False otherwise.
@@ -161,3 +161,40 @@ class SupabaseImageAdapter(ImageRepositoryPort, ImageStoragePort, ClaimRepositor
             .execute()
         )
         return bool(response.data)
+
+    def save_vehicle_type_result(
+        self,
+        claim_id: str,
+        user_id: str,
+        identified_type: str | None,
+        claim_rejected: bool,
+        status: str,
+        error: str | None,
+    ) -> bool:
+        """
+        Insert a vehicle type classification result row into the vehicle_type_results table.
+        args:
+            claim_id: UUID of the claim associated with this result.
+            user_id: UUID of the user associated with this claim.
+            identified_type: The final identified vehicle type for the claim, or None if it couldn't be determined.
+            claim_rejected: Boolean indicating if the claim was rejected based on this analysis.
+            status: Status of the vehicle type classification process (e.g., 'completed', 'failed').
+            error: Optional error message if the process failed.
+        returns:
+            True if the insert was successful, False otherwise.
+        """
+        response = (
+            self._client
+            .table("vehicle_type_results")
+            .insert({
+                "claim_id": claim_id,
+                "user_id": user_id,
+                "identified_type": identified_type,
+                "claim_rejected": claim_rejected,
+                "status": status,
+                "error": error,
+            })
+            .execute()
+        )
+        return bool(response.data)
+
