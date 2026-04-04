@@ -31,6 +31,17 @@ class ImageRepositoryPort(ABC):
         """
         pass
 
+    @abstractmethod
+    def fetch_vehicle_images(self, claim_id: str) -> list[ImageRecord]:
+        """
+        Fetch only images where is_vehical=True for a given claim.
+        Args:
+            claim_id: UUID of the claim to fetch vehicle images for.
+        Returns:
+            list[ImageRecord]: List of image records that contain vehicles.
+        """
+        pass
+
 class ImageStoragePort(ABC):
     """Interface for storage operations on claim images."""
 
@@ -88,3 +99,28 @@ class ClaimRepositoryPort(ABC):
         """
         pass
 
+    @abstractmethod
+    def save_same_vehicle_result(
+        self,
+        claim_id: str,
+        user_id: str,
+        vehicle_images_count: int,
+        is_same_vehicle: bool,
+        claim_rejected: bool,
+        status: str,
+        error: str | None,
+    ) -> bool:
+        """
+        Save the same vehicle detection agent result to the same_vehicle_results table.
+        Args:
+            claim_id: UUID of the claim that was processed.
+            user_id: UUID of the user who filed the claim.
+            vehicle_images_count: Number of vehicle images analyzed.
+            is_same_vehicle: Whether all images show the same vehicle.
+            claim_rejected: Whether the claim was rejected.
+            status: Agent status ('completed' or 'failed').
+            error: Error message if the agent failed, None otherwise.
+        Returns:
+            bool: True if the insert was successful, False otherwise.
+        """
+        pass
