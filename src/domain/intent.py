@@ -10,3 +10,12 @@ ClassificationStatus = Literal[
     "completed",
     "failed"
 ]
+
+# Same vehicle detection agent status lifecycle
+SameVehicleStatus = Literal[
+    "pending",
+    "fetching_vehicle_images",
+    "analyzing",
+    "completed",
+    "failed"
+]
