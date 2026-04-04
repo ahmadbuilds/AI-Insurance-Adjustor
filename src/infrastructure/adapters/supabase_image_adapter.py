@@ -2,7 +2,6 @@ from supabase import Client
 from domain.ports import ImageRepositoryPort, ImageStoragePort, ClaimRepositoryPort
 from domain.entities import ImageRecord
 
-
 class SupabaseImageAdapter(ImageRepositoryPort, ImageStoragePort, ClaimRepositoryPort):
     
     def __init__(self, client: Client, bucket_name: str = "claim_images"):
@@ -95,6 +94,66 @@ class SupabaseImageAdapter(ImageRepositoryPort, ImageStoragePort, ClaimRepositor
                 "user_id": user_id,
                 "images_processed": images_processed,
                 "vehicles_detected": vehicles_detected,
+                "claim_rejected": claim_rejected,
+                "status": status,
+                "error": error,
+            })
+            .execute()
+        )
+        return bool(response.data)
+
+    def fetch_vehicle_images(self, claim_id: str) -> list[ImageRecord]:
+        """
+        Fetch only images with is_vehical=True for a given claim_id from Supabase and return them as a list of ImageRecord.
+        args:
+            claim_id: UUID of the claim to fetch vehicle images for.
+        returns:
+            List of ImageRecord objects containing metadata for images that have is_vehical=True.
+        """
+        response = (
+            self._client
+            .table("claim_images")
+            .select("id, claim_id, user_id, storage_path, file_name, file_size, mime_type, is_vehical")
+            .eq("claim_id", claim_id)
+            .eq("is_vehical", True)
+            .execute()
+        )
+        if not response.data:
+            return []
+
+        return [ImageRecord(**row) for row in response.data]
+
+    def save_same_vehicle_result(
+        self,
+        claim_id: str,
+        user_id: str,
+        vehicle_images_count: int,
+        is_same_vehicle: bool,
+        claim_rejected: bool,
+        status: str,
+        error: str | None,
+    ) -> bool:
+        """
+        Insert a same vehicle detection result row into the same_vehicle_results table.
+        args:
+            claim_id: UUID of the claim associated with this result.
+            user_id: UUID of the user associated with this claim.
+            vehicle_images_count: Number of vehicle images analyzed.
+            is_same_vehicle: Boolean indicating if all vehicle images show the same vehicle.
+            claim_rejected: Boolean indicating if the claim was rejected based on this analysis.
+            status: Status of the same vehicle detection process (e.g., 'completed', 'failed
+            error: Optional error message if the process failed.
+        returns:
+            True if the insert was successful, False otherwise.
+        """
+        response = (
+            self._client
+            .table("same_vehicle_results")
+            .insert({
+                "claim_id": claim_id,
+                "user_id": user_id,
+                "vehicle_images_count": vehicle_images_count,
+                "is_same_vehicle": is_same_vehicle,
                 "claim_rejected": claim_rejected,
                 "status": status,
                 "error": error,
