@@ -125,6 +125,7 @@ def run_classification_service():
                         "claim_id": claim_id,
                         "User_id": user_id,
                         "source_task": "classification",
+                        "claim_rejected": str(result.get("claim_rejected", False)),
                     })
                     print(f"Completion signal published to {RESULT_STREAM}")
 
