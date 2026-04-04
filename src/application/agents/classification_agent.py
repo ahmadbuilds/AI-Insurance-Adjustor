@@ -1,6 +1,5 @@
 from langgraph.graph import StateGraph, START, END
-from networkx import display
-from ollama import Image
+from IPython.display import Image, display
 from application.states import ClassificationAgentState
 from domain.entities import ImageWithUrl, ClassificationResult
 from domain.prompts.classification_agent_prompt import vehicle_detection_prompt
