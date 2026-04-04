@@ -41,12 +41,24 @@ class ClassificationAgent:
         graph.add_node("decide_claim", self._decide_claim_node)
 
         graph.add_edge(START, "fetch_images")
-        graph.add_edge("fetch_images", "analyze_images")
-        graph.add_edge("analyze_images", "update_results")
+        graph.add_conditional_edges("fetch_images", self._route_after_fetch)
+        graph.add_conditional_edges("analyze_images", self._route_after_analyze)
         graph.add_edge("update_results", "decide_claim")
         graph.add_edge("decide_claim", END)
 
         return graph.compile()
+
+    def _route_after_fetch(self, state: ClassificationAgentState) -> str:
+        if state.status == "failed" and state.error and "No images found" not in state.error and state.retry_count < 3:
+            print(f"  [Classification] Retrying fetch_images (Attempt {state.retry_count}/3)...")
+            return "fetch_images"
+        return "analyze_images"
+
+    def _route_after_analyze(self, state: ClassificationAgentState) -> str:
+        if state.status == "failed" and state.retry_count < 3:
+            print(f"  [Classification] Retrying analyze_images (Attempt {state.retry_count}/3)...")
+            return "analyze_images"
+        return "update_results"
 
 
     #function to fetch images for the claim using the fetch_claim_images tool 
@@ -72,7 +84,7 @@ class ClassificationAgent:
             return {"images": images, "status": "fetching_images"}
 
         except Exception as e:
-            return {"images": [], "status": "failed", "error": str(e)}
+            return {"images": [], "status": "failed", "error": str(e), "retry_count": state.retry_count + 1}
 
 
     #function to analyze each image using the vision LLM and classify if it contains a vehicle or not
@@ -109,10 +121,8 @@ class ClassificationAgent:
 
             except Exception as e:
                 print(f"  Error analyzing image '{image.file_name}': {str(e)}")
-                results.append(ClassificationResult(
-                    image_id=image.id,
-                    is_vehical=False,
-                ))
+                return {"classification_results": [], "status": "failed", "error": str(e), "retry_count": state.retry_count + 1}
+
 
         return {"classification_results": results, "status": "analyzing"}
 

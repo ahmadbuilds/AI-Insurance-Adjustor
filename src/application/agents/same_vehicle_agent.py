@@ -40,11 +40,23 @@ class SameVehicleAgent:
         graph.add_node("decide_claim", self._decide_claim_node)
 
         graph.add_edge(START, "fetch_vehicle_images")
-        graph.add_edge("fetch_vehicle_images", "analyze_same_vehicle")
-        graph.add_edge("analyze_same_vehicle", "decide_claim")
+        graph.add_conditional_edges("fetch_vehicle_images", self._route_after_fetch)
+        graph.add_conditional_edges("analyze_same_vehicle", self._route_after_analyze)
         graph.add_edge("decide_claim", END)
 
         return graph.compile()
+
+    def _route_after_fetch(self, state: SameVehicleAgentState) -> str:
+        if state.status == "failed" and state.error and "No vehicle images found" not in state.error and state.retry_count < 3:
+            print(f"  [SameVehicle] Retrying fetch_vehicle_images (Attempt {state.retry_count}/3)...")
+            return "fetch_vehicle_images"
+        return "analyze_same_vehicle"
+
+    def _route_after_analyze(self, state: SameVehicleAgentState) -> str:
+        if state.status == "failed" and state.retry_count < 3:
+            print(f"  [SameVehicle] Retrying analyze_same_vehicle (Attempt {state.retry_count}/3)...")
+            return "analyze_same_vehicle"
+        return "decide_claim"
 
 
     #function to fetch only vehicle images (is_vehical=True) for the claim
@@ -70,7 +82,7 @@ class SameVehicleAgent:
             return {"vehicle_images": images, "status": "fetching_vehicle_images"}
 
         except Exception as e:
-            return {"vehicle_images": [], "status": "failed", "error": str(e)}
+            return {"vehicle_images": [], "status": "failed", "error": str(e), "retry_count": state.retry_count + 1}
 
 
     #function to analyze whether all vehicle images show the same vehicle using the vision LLM
@@ -116,7 +128,7 @@ class SameVehicleAgent:
 
         except Exception as e:
             print(f"  Error analyzing vehicle images: {str(e)}")
-            return {"is_same_vehicle": False, "status": "failed", "error": str(e)}
+            return {"is_same_vehicle": False, "status": "failed", "error": str(e), "retry_count": state.retry_count + 1}
 
 
     #function to decide whether to reject the claim based on same-vehicle analysis

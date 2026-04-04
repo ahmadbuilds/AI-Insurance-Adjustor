@@ -12,6 +12,7 @@ class ClassificationAgentState(BaseModel):
     status: ClassificationStatus = Field(default="pending", description="Current stage in the agent lifecycle")
     error: Optional[str] = Field(default=None, description="Error message if the agent failed")
     claim_rejected: bool = Field(default=False, description="True if the claim was rejected because no images contained a vehicle")
+    retry_count: int = Field(default=0, description="Counter for retry attempts on failure")
 
 # Same Vehicle Detection Agent State
 class SameVehicleAgentState(BaseModel):
@@ -22,6 +23,7 @@ class SameVehicleAgentState(BaseModel):
     claim_rejected: bool = Field(default=False, description="True if the claim was rejected because images show different vehicles")
     status: SameVehicleStatus = Field(default="pending", description="Current stage in the agent lifecycle")
     error: Optional[str] = Field(default=None, description="Error message if the agent failed")
+    retry_count: int = Field(default=0, description="Counter for retry attempts on failure")
 
 # Vehicle Type Agent State
 class VehicleTypeAgentState(BaseModel):
@@ -33,4 +35,5 @@ class VehicleTypeAgentState(BaseModel):
     claim_rejected: bool = Field(default=False, description="True if the claim was rejected because images show different vehicle types")
     status: VehicleTypeStatus = Field(default="pending", description="Current stage in the agent lifecycle")
     error: Optional[str] = Field(default=None, description="Error message if the agent failed")
+    retry_count: int = Field(default=0, description="Counter for retry attempts on failure")
 

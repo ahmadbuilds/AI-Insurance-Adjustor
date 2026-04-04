@@ -39,11 +39,23 @@ class VehicleTypeAgent:
         graph.add_node("decide_claim", self._decide_claim_node)
 
         graph.add_edge(START, "fetch_vehicle_images")
-        graph.add_edge("fetch_vehicle_images", "analyze_vehicle_types")
-        graph.add_edge("analyze_vehicle_types", "decide_claim")
+        graph.add_conditional_edges("fetch_vehicle_images", self._route_after_fetch)
+        graph.add_conditional_edges("analyze_vehicle_types", self._route_after_analyze)
         graph.add_edge("decide_claim", END)
 
         return graph.compile()
+
+    def _route_after_fetch(self, state: VehicleTypeAgentState) -> str:
+        if state.status == "failed" and state.error and "No vehicle images found" not in state.error and state.retry_count < 3:
+            print(f"  [VehicleType] Retrying fetch_vehicle_images (Attempt {state.retry_count}/3)...")
+            return "fetch_vehicle_images"
+        return "analyze_vehicle_types"
+
+    def _route_after_analyze(self, state: VehicleTypeAgentState) -> str:
+        if state.status == "failed" and state.retry_count < 3:
+            print(f"  [VehicleType] Retrying analyze_vehicle_types (Attempt {state.retry_count}/3)...")
+            return "analyze_vehicle_types"
+        return "decide_claim"
 
     #function to fetch only vehicle images for the claim
     def _fetch_vehicle_images_node(self, state: VehicleTypeAgentState) -> dict:
@@ -69,7 +81,7 @@ class VehicleTypeAgent:
             return {"vehicle_images": images, "status": "fetching_vehicle_images"}
 
         except Exception as e:
-            return {"vehicle_images": [], "status": "failed", "error": str(e), "claim_rejected": True}
+            return {"vehicle_images": [], "status": "failed", "error": str(e), "claim_rejected": True, "retry_count": state.retry_count + 1}
 
     #function to analyze vehicle type for each image using vision LLM
     def _analyze_vehicle_types_node(self, state: VehicleTypeAgentState) -> dict:
@@ -111,7 +123,7 @@ class VehicleTypeAgent:
 
         except Exception as e:
             print(f"  Error classifying vehicle types: {str(e)}")
-            return {"type_classifications": results, "status": "failed", "error": str(e), "claim_rejected": True}
+            return {"type_classifications": results, "status": "failed", "error": str(e), "claim_rejected": True, "retry_count": state.retry_count + 1}
 
 
     #function to decide whether to reject the claim based on classification consistency
