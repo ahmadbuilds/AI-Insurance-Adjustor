@@ -37,3 +37,8 @@ class ImageWithUrl(BaseModel):
 class ClassificationResult(BaseModel):
     image_id:str=Field(description="The image record ID that was classified")
     is_vehical:bool=Field(description="Whether a vehicle was detected in the image")
+
+# Result of vehicle type classification for a single image
+class VehicleTypeClassification(BaseModel):
+    image_id:str=Field(description="The image record ID that was classified")
+    vehicle_type:str=Field(description="The classified vehicle type category")
