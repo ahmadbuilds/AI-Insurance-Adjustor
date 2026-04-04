@@ -313,6 +313,36 @@ CREATE POLICY "Admins can view all same vehicle results"
   USING (public.is_admin());
 
 -- ============================================
+-- 10d. Vehicle Type Results table
+-- Stores the output of the vehicle type classification agent per claim
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS public.vehicle_type_results (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  claim_id UUID NOT NULL REFERENCES public.claims(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  identified_type TEXT,
+  claim_rejected BOOLEAN NOT NULL DEFAULT FALSE,
+  status TEXT NOT NULL DEFAULT 'completed',
+  error TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Enable RLS on vehicle_type_results table
+ALTER TABLE public.vehicle_type_results ENABLE ROW LEVEL SECURITY;
+
+-- Users can view their own vehicle type results
+CREATE POLICY "Users can view own vehicle type results"
+  ON public.vehicle_type_results FOR SELECT
+  USING (auth.uid() = user_id);
+
+-- Admins can view all vehicle type results
+CREATE POLICY "Admins can view all vehicle type results"
+  ON public.vehicle_type_results FOR SELECT
+  USING (public.is_admin());
+
+
+-- ============================================
 -- 11. Storage RLS policies for claim_images bucket
 -- Make sure the bucket "claim_images" exists in Supabase Storage dashboard
 -- ============================================
