@@ -198,3 +198,26 @@ class SupabaseImageAdapter(ImageRepositoryPort, ImageStoragePort, ClaimRepositor
         )
         return bool(response.data)
 
+    def save_admin_notification(self, claim_id: str, message: str, failed_task: str) -> bool:
+        """
+        Insert a new admin notification into the admin_notifications table when an agent fails and requires manual review.
+        args:
+            claim_id: UUID of the claim associated with this notification.
+            message: A message describing the reason for the notification (e.g., error details).
+            failed_task: The specific task or agent that failed (e.g., 'same_vehicle_detection').
+        returns:
+            True if the insert was successful, False otherwise.
+        """
+        response = (
+            self._client
+            .table("admin_notifications")
+            .insert({
+                "claim_id": claim_id,
+                "message": message,
+                "failed_task": failed_task,
+                "is_resolved": False
+            })
+            .execute()
+        )
+        return bool(response.data)
+
