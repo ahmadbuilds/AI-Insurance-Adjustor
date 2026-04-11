@@ -221,3 +221,48 @@ class SupabaseImageAdapter(ImageRepositoryPort, ImageStoragePort, ClaimRepositor
         )
         return bool(response.data)
 
+    def save_damage_detection_result(
+        self,
+        claim_id: str,
+        user_id: str,
+        images_analyzed: int,
+        images_with_damage: int,
+        claim_rejected: bool,
+        damage_details: list[dict],
+        damage_summary: str | None,
+        status: str,
+        error: str | None,
+    ) -> bool:
+        """
+        Insert a damage detection result row into the damage_detection_results table.
+        args:
+            claim_id: UUID of the claim associated with this result.
+            user_id: UUID of the user associated with this claim.
+            images_analyzed: Total number of vehicle images analyzed for damage.
+            images_with_damage: Number of images where damage was detected.
+            claim_rejected: Boolean indicating if the claim was rejected (no damage found).
+            damage_details: Serialized list of per-image damage results stored as JSONB.
+            damage_summary: Aggregated natural-language summary of all detected damages.
+            status: Status of the damage detection process (e.g., 'completed', 'failed').
+            error: Optional error message if the process failed.
+        returns:
+            True if the insert was successful, False otherwise.
+        """
+        import json
+        response = (
+            self._client
+            .table("damage_detection_results")
+            .insert({
+                "claim_id": claim_id,
+                "user_id": user_id,
+                "images_analyzed": images_analyzed,
+                "images_with_damage": images_with_damage,
+                "claim_rejected": claim_rejected,
+                "damage_details": json.dumps(damage_details),
+                "damage_summary": damage_summary,
+                "status": status,
+                "error": error,
+            })
+            .execute()
+        )
+        return bool(response.data)
