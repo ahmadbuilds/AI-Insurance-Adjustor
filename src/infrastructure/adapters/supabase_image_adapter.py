@@ -266,3 +266,127 @@ class SupabaseImageAdapter(ImageRepositoryPort, ImageStoragePort, ClaimRepositor
             .execute()
         )
         return bool(response.data)
+
+    def fetch_classification_result(self, claim_id: str) -> dict | None:
+        """Fetch the most recent classification result for a claim."""
+        response = (
+            self._client
+            .table("classification_results")
+            .select("*")
+            .eq("claim_id", claim_id)
+            .order("created_at", desc=True)
+            .limit(1)
+            .execute()
+        )
+        if response.data and len(response.data) > 0:
+            return response.data[0]
+        return None
+
+    def fetch_same_vehicle_result(self, claim_id: str) -> dict | None:
+        """Fetch the most recent same vehicle result for a claim."""
+        response = (
+            self._client
+            .table("same_vehicle_results")
+            .select("*")
+            .eq("claim_id", claim_id)
+            .order("created_at", desc=True)
+            .limit(1)
+            .execute()
+        )
+        if response.data and len(response.data) > 0:
+            return response.data[0]
+        return None
+
+    def fetch_vehicle_type_result(self, claim_id: str) -> dict | None:
+        """Fetch the most recent vehicle type result for a claim."""
+        response = (
+            self._client
+            .table("vehicle_type_results")
+            .select("*")
+            .eq("claim_id", claim_id)
+            .order("created_at", desc=True)
+            .limit(1)
+            .execute()
+        )
+        if response.data and len(response.data) > 0:
+            return response.data[0]
+        return None
+
+    def fetch_damage_detection_result(self, claim_id: str) -> dict | None:
+        """Fetch the most recent damage detection result for a claim."""
+        response = (
+            self._client
+            .table("damage_detection_results")
+            .select("*")
+            .eq("claim_id", claim_id)
+            .order("created_at", desc=True)
+            .limit(1)
+            .execute()
+        )
+        if response.data and len(response.data) > 0:
+            return response.data[0]
+        return None
+
+    def save_image_pipeline_result(
+        self,
+        claim_id: str,
+        user_id: str,
+        total_images: int,
+        vehicle_images_count: int,
+        non_vehicle_images_count: int,
+        is_same_vehicle: bool,
+        vehicle_type: str | None,
+        has_damage: bool,
+        images_with_damage: int,
+        damage_details: list[dict],
+        damage_summary: str | None,
+        all_checks_passed: bool,
+        pipeline_summary: str,
+        status: str,
+        error: str | None,
+    ) -> bool:
+        """
+        Insert an image pipeline summary result into the image_pipeline_results table.
+        args:
+            claim_id: UUID of the claim.
+            user_id: UUID of the user.
+            total_images: Total images submitted with the claim.
+            vehicle_images_count: Number of images containing a vehicle.
+            non_vehicle_images_count: Number of images without a vehicle.
+            is_same_vehicle: Whether all vehicle images are the same vehicle.
+            vehicle_type: Identified vehicle type code or None.
+            has_damage: Whether any image showed damage.
+            images_with_damage: Count of images with detected damage.
+            damage_details: Full structured per-image damage data as JSONB.
+            damage_summary: Aggregated damage summary text.
+            all_checks_passed: Whether every pipeline agent passed.
+            pipeline_summary: Human-readable pipeline outcome string.
+            status: Agent status ('completed' or 'failed').
+            error: Error message if failed, else None.
+        returns:
+            True if insert was successful, False otherwise.
+        """
+        import json
+        response = (
+            self._client
+            .table("image_pipeline_results")
+            .insert({
+                "claim_id": claim_id,
+                "user_id": user_id,
+                "total_images": total_images,
+                "vehicle_images_count": vehicle_images_count,
+                "non_vehicle_images_count": non_vehicle_images_count,
+                "is_same_vehicle": is_same_vehicle,
+                "vehicle_type": vehicle_type,
+                "has_damage": has_damage,
+                "images_with_damage": images_with_damage,
+                "damage_details": json.dumps(damage_details),
+                "damage_summary": damage_summary,
+                "all_checks_passed": all_checks_passed,
+                "pipeline_summary": pipeline_summary,
+                "status": status,
+                "error": error,
+            })
+            .execute()
+        )
+        return bool(response.data)
