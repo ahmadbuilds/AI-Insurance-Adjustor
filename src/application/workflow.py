@@ -132,12 +132,29 @@ def run_workflow():
                             print(f"Image pipeline summary completed for claim {claim_id}")
 
                             if claim_rejected=="False":
-                                #TODO: route to liability assessment stream when that agent is ready
-                                #payload=ClaimEvent(claim_id=claim_id,User_id=user_id).model_dump()
-                                #publish_to_stream(LIABILITY_STREAM, payload)
-                                print(f"Image pipeline summary passed — awaiting liability agent implementation")
+                                #route to liability assessment
+                                payload=ClaimEvent(claim_id=claim_id,User_id=user_id).model_dump()
+                                publish_to_stream(LIABILITY_STREAM, payload)
+                                print(f"Routed claim {claim_id} to liability assessment")
                             else:
                                 print(f"Claim {claim_id} was rejected by image pipeline summary — no further processing")
+
+                        elif source_task=="liability_assessment":
+                            print(f"Liability assessment completed for claim {claim_id}")
+                            needs_admin_review=message_data.get("needs_admin_review","False")
+
+                            if needs_admin_review=="True":
+                                #confidence < 70% — admin will decide via the resolve endpoint
+                                print(f"Claim {claim_id} flagged for admin review (low confidence)")
+                            elif claim_rejected=="False":
+                                #confidence >= 70% — claim passed liability
+                                #TODO: route to RAG agent stream when ready
+                                #RAG_STREAM="stream:task:rag"
+                                #payload=ClaimEvent(claim_id=claim_id,User_id=user_id).model_dump()
+                                #publish_to_stream(RAG_STREAM, payload)
+                                print(f"Liability passed — awaiting RAG agent implementation")
+                            else:
+                                print(f"Claim {claim_id} was rejected by liability assessment")
 
                         #sending the ack to redis to mark the message as processed
                         redis.xack(RESULT_STREAM, GROUP_NAME, message_id)
