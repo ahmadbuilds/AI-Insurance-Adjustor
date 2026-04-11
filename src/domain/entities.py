@@ -58,3 +58,20 @@ class ImageDamageResult(BaseModel):
     has_damage:bool=Field(description="Whether any damage was detected in this image")
     damages:list[DamageItem]=Field(default_factory=list, description="List of individual damages detected in the image, empty if has_damage is False")
     damage_summary:str=Field(default="", description="One-line natural-language summary of all damage found in this image")
+
+
+# Unified image pipeline summary — combines results from all image analysis agents
+class ImagePipelineSummary(BaseModel):
+    claim_id:str=Field(description="The claim this summary belongs to")
+    user_id:str=Field(description="The user who filed the claim")
+    total_images:int=Field(default=0, description="Total number of images submitted with the claim")
+    vehicle_images_count:int=Field(default=0, description="Number of images that contain a vehicle")
+    non_vehicle_images_count:int=Field(default=0, description="Number of images that do not contain a vehicle")
+    is_same_vehicle:bool=Field(default=False, description="Whether all vehicle images show the same vehicle")
+    vehicle_type:Optional[str]=Field(default=None, description="The identified vehicle type (e.g., PC, MC, CT)")
+    has_damage:bool=Field(default=False, description="Whether any vehicle image showed damage")
+    images_with_damage:int=Field(default=0, description="Number of images that have visible damage")
+    damage_details:list[dict]=Field(default_factory=list, description="Full structured per-image damage data from the damage detection agent")
+    damage_summary:Optional[str]=Field(default=None, description="Aggregated natural-language summary of all detected damages")
+    all_checks_passed:bool=Field(default=False, description="True if all image pipeline agents passed without rejection")
+    pipeline_summary:str=Field(default="", description="Human-readable summary of the entire image pipeline outcome")
