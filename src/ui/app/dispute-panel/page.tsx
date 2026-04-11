@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useState,useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   GitBranch,
@@ -115,16 +115,10 @@ function ClaimDetail({ claim }: { claim: RejectedClaim }) {
 
 // ── Image row ─────────────────────────────────────────────────────────────────
 function ImageRow({ img }: { img: ClaimImage }) {
-  const [thumbUrl, setThumbUrl] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!img.mime_type?.startsWith("image/")) return;
-    const supabase = createClient();
-    const { data } = supabase.storage
-      .from("claim_images")
-      .getPublicUrl(img.storage_path);
-    if (data?.publicUrl) setThumbUrl(data.publicUrl);
-  }, [img]);
+  const supabase = createClient();
+  const thumbUrl = img.mime_type?.startsWith("image/")
+    ? supabase.storage.from("claim_images").getPublicUrl(img.storage_path).data?.publicUrl
+    : null;
 
   return (
     <div className="flex items-center gap-5 rounded-2xl bg-white/8 px-6 py-5 border border-white/15">
