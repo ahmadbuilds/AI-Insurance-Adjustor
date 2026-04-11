@@ -148,3 +148,17 @@ class ClaimRepositoryPort(ABC):
             bool: True if the insert was successful, False otherwise.
         """
         pass
+
+    @abstractmethod
+    def save_admin_notification(self, claim_id: str, message: str, failed_task: str) -> bool:
+        """
+        Save an admin notification for a failed agent task.
+        Args:
+            claim_id: UUID of the claim.
+            message: Error message to display.
+            failed_task: The task that failed (e.g. classification, same_vehicle).
+        Returns:
+            bool: True if successful.
+        """
+        pass
+
