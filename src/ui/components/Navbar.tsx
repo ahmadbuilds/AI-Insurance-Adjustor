@@ -7,6 +7,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { LoadingShield } from "./LoadingShield";
+import AdminNotifications from "./AdminNotifications";
 
 interface UserProfile {
   username: string;
@@ -218,7 +219,8 @@ export default function Navbar() {
   const router = useRouter();
 
   useEffect(() => {
-    setMounted(true);
+    // mounted=true check handles client-side only renders
+    setTimeout(() => setMounted(true), 0);
   }, []);
 
   const fetchUserData = useRef(async () => {
@@ -352,13 +354,15 @@ export default function Navbar() {
               </div>
             </div>
 
-            {/* Avatar button */}
-            <button
-              ref={buttonRef}
-              data-navbar-avatar
-              onClick={handleAvatarClick}
-              className="flex items-center gap-2 rounded-full focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/50 focus:ring-offset-2 focus:ring-offset-[#030712]"
-            >
+            <div className="flex items-center gap-4">
+              {user && user.role === "admin" && <AdminNotifications />}
+              {/* Avatar button */}
+              <button
+                ref={buttonRef}
+                data-navbar-avatar
+                onClick={handleAvatarClick}
+                className="flex items-center gap-2 rounded-full focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/50 focus:ring-offset-2 focus:ring-offset-[#030712]"
+              >
               {user?.profile_image_url ? (
                 <img
                   src={user.profile_image_url}
@@ -375,7 +379,8 @@ export default function Navbar() {
                   )}
                 </div>
               )}
-            </button>
+              </button>
+            </div>
           </div>
         </div>
       </nav>
