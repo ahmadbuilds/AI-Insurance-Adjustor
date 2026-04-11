@@ -22,3 +22,16 @@ async def emit_agent_failure(claim_id: str, failed_task: str, message: str):
         "message": message,
     })
     print(f"Emitted agent_failure for claim {claim_id} via Socket.IO")
+
+async def emit_liability_review(claim_id: str, confidence_percentage: int, recommendation: str, reasoning: str):
+    """
+    Emit a real-time event to all connected admin clients that a claim
+    requires manual liability review due to low confidence.
+    """
+    await sio.emit("liability_review", {
+        "claim_id": claim_id,
+        "confidence_percentage": confidence_percentage,
+        "recommendation": recommendation,
+        "reasoning": reasoning,
+    })
+    print(f"Emitted liability_review for claim {claim_id} via Socket.IO")
