@@ -75,3 +75,30 @@ class ImagePipelineSummary(BaseModel):
     damage_summary:Optional[str]=Field(default=None, description="Aggregated natural-language summary of all detected damages")
     all_checks_passed:bool=Field(default=False, description="True if all image pipeline agents passed without rejection")
     pipeline_summary:str=Field(default="", description="Human-readable summary of the entire image pipeline outcome")
+
+
+# Per-damage alignment analysis used by the liability agent
+class DamageAlignmentItem(BaseModel):
+    part:str=Field(description="The vehicle part from the damage detection result")
+    damage_type:str=Field(description="The damage type from the damage detection result")
+    severity:str=Field(description="The severity from the damage detection result")
+    is_consistent:bool=Field(description="Whether this specific damage is consistent with the claimed scenario")
+    alignment_score:float=Field(description="0.0-1.0 score for how well this damage aligns with the user's description")
+    reasoning:str=Field(description="Detailed explanation of why this damage is or isn't consistent with the claim")
+
+
+# Liability assessment result from the LLM analysis
+class LiabilityAssessment(BaseModel):
+    claim_id:str=Field(description="The claim that was assessed")
+    user_id:str=Field(description="The user who filed the claim")
+    overall_confidence:float=Field(description="0.0-1.0 overall confidence that the claim is legitimate based on damage-description alignment")
+    confidence_percentage:int=Field(description="0-100 integer confidence percentage for display")
+    scenario_plausibility:str=Field(description="Assessment of whether the described scenario could realistically cause the detected damage: 'plausible', 'questionable', or 'implausible'")
+    scenario_reasoning:str=Field(description="Detailed reasoning about whether the described incident scenario could produce the observed damage patterns")
+    damage_alignments:list[DamageAlignmentItem]=Field(default_factory=list, description="Per-damage alignment breakdown")
+    consistent_damages:int=Field(default=0, description="Number of damages consistent with the claim")
+    inconsistent_damages:int=Field(default=0, description="Number of damages inconsistent with the claim")
+    overall_reasoning:str=Field(description="Full natural-language explanation of the liability decision with all contributing factors")
+    recommendation:str=Field(description="Agent recommendation: 'approve', 'reject', or 'needs_human_review'")
+    flags:list[str]=Field(default_factory=list, description="List of specific red flags or concerns identified during analysis")
+

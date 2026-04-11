@@ -48,3 +48,12 @@ ImagePipelineSummaryStatus = Literal[
     "completed",
     "failed"
 ]
+
+# Liability assessment agent status lifecycle
+LiabilityStatus = Literal[
+    "pending",
+    "fetching_data",
+    "analyzing",
+    "completed",
+    "failed"
+]
