@@ -97,7 +97,7 @@ export async function POST(request: Request) {
     const briefFile = formData.get("brief");
     const photoFile = formData.get("photos");
 
-    let evidenceParts: string[] = [];
+    const evidenceParts: string[] = [];
 
     if (evidenceFile instanceof File) {
       const text = await extractTextFromFile(evidenceFile);
