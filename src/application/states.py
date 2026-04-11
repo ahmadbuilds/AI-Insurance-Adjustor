@@ -1,7 +1,7 @@
 from pydantic import BaseModel, Field
 from typing import Optional
-from domain.intent import ClassificationStatus, SameVehicleStatus, VehicleTypeStatus, DamageDetectionStatus
-from domain.entities import ImageWithUrl, ClassificationResult, VehicleTypeClassification, ImageDamageResult
+from domain.intent import ClassificationStatus, SameVehicleStatus, VehicleTypeStatus, DamageDetectionStatus, ImagePipelineSummaryStatus
+from domain.entities import ImageWithUrl, ClassificationResult, VehicleTypeClassification, ImageDamageResult, ImagePipelineSummary
 
 # Classification Agent State for Vehicle Detection in Insurance Claims
 class ClassificationAgentState(BaseModel):
@@ -48,3 +48,17 @@ class DamageDetectionAgentState(BaseModel):
     status: DamageDetectionStatus = Field(default="pending", description="Current stage in the agent lifecycle")
     error: Optional[str] = Field(default=None, description="Error message if the agent failed")
     retry_count: int = Field(default=0, description="Counter for retry attempts on failure")
+
+# Image Pipeline Summary Agent State
+class ImagePipelineSummaryAgentState(BaseModel):
+    claim_id: str = Field(description="The claim being processed")
+    user_id: str = Field(description="The user who filed the claim")
+    classification_result: Optional[dict] = Field(default=None, description="Raw classification agent result from DB")
+    same_vehicle_result: Optional[dict] = Field(default=None, description="Raw same vehicle agent result from DB")
+    vehicle_type_result: Optional[dict] = Field(default=None, description="Raw vehicle type agent result from DB")
+    damage_detection_result: Optional[dict] = Field(default=None, description="Raw damage detection agent result from DB")
+    pipeline_summary: Optional[ImagePipelineSummary] = Field(default=None, description="The aggregated pipeline summary")
+    status: ImagePipelineSummaryStatus = Field(default="pending", description="Current stage in the agent lifecycle")
+    error: Optional[str] = Field(default=None, description="Error message if the agent failed")
+    retry_count: int = Field(default=0, description="Counter for retry attempts on failure")
+
