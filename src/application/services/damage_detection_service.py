@@ -2,7 +2,7 @@ import json
 from infrastructure.redis.redis_config import get_redis_client
 from infrastructure.redis.redis_client import publish_to_stream
 from infrastructure.supabase.supabase_client import get_service_client
-from infrastructure.adapters.supabase_image_adapter import SupabaseImageAdapter
+from infrastructure.adapters.combined_adapter import CombinedSupabaseAdapter
 from domain.tools.fetch_vehicle_images_tool import make_fetch_vehicle_images_tool
 from domain.tools.update_claim_status_tool import make_update_claim_status_tool
 from domain.tools.log_agent_failure_tool import make_log_agent_failure_tool
@@ -31,12 +31,12 @@ def setup_damage_detection_stream():
             raise e
 
 
-def create_damage_detection_agent(claim_id: str, adapter: SupabaseImageAdapter) -> DamageDetectionAgent:
+def create_damage_detection_agent(claim_id: str, adapter: CombinedSupabaseAdapter) -> DamageDetectionAgent:
     """
     Factory function to create a DamageDetectionAgent wired with tools for a specific claim.
     args:
         claim_id: str - the ID of the claim to process
-        adapter: SupabaseImageAdapter - the adapter instance for DB/storage operations
+        adapter: CombinedSupabaseAdapter - the adapter instance for DB/storage operations
     returns:
         DamageDetectionAgent - an agent instance with tools configured for the claim
     """
@@ -100,7 +100,7 @@ def run_damage_detection_service():
 
                     # Create a fresh agent wired to this claim
                     service_client = get_service_client()
-                    adapter = SupabaseImageAdapter(client=service_client)
+                    adapter = CombinedSupabaseAdapter(client=service_client)
                     agent = create_damage_detection_agent(claim_id, adapter)
 
                     # Run the damage detection graph
