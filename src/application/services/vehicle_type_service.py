@@ -4,6 +4,7 @@ from infrastructure.supabase.supabase_client import get_service_client
 from infrastructure.adapters.supabase_image_adapter import SupabaseImageAdapter
 from domain.tools.fetch_vehicle_images_tool import make_fetch_vehicle_images_tool
 from domain.tools.update_claim_status_tool import make_update_claim_status_tool
+from domain.tools.log_agent_failure_tool import make_log_agent_failure_tool
 from application.agents.vehicle_type_agent import VehicleTypeAgent
 
 
@@ -43,9 +44,16 @@ def create_vehicle_type_agent(claim_id: str, adapter: SupabaseImageAdapter) -> V
         claim_id=claim_id,
     )
 
+    log_agent_failure_tool = make_log_agent_failure_tool(
+        claim_repository=adapter,
+        claim_id=claim_id,
+        failed_task="vehicle_type_classification"
+    )
+
     agent = VehicleTypeAgent(
         fetch_vehicle_images_tool=fetch_tool,
         update_claim_status_tool=claim_status_tool,
+        log_agent_failure_tool=log_agent_failure_tool,
     )
     return agent
 

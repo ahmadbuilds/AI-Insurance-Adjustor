@@ -5,6 +5,7 @@ from infrastructure.adapters.supabase_image_adapter import SupabaseImageAdapter
 from domain.tools.fetch_claim_images_tool import make_fetch_claim_images_tool
 from domain.tools.update_vehicle_status_tool import make_update_vehicle_status_tool
 from domain.tools.update_claim_status_tool import make_update_claim_status_tool
+from domain.tools.log_agent_failure_tool import make_log_agent_failure_tool
 from application.agents.classification_agent import ClassificationAgent
 
 
@@ -52,10 +53,17 @@ def create_classification_agent(claim_id: str, adapter: SupabaseImageAdapter) ->
         claim_id=claim_id,
     )
 
+    log_agent_failure_tool = make_log_agent_failure_tool(
+        claim_repository=adapter,
+        claim_id=claim_id,
+        failed_task="classification"
+    )
+
     agent = ClassificationAgent(
         fetch_images_tool=fetch_tool,
         update_vehicle_status_tool=update_tool,
         update_claim_status_tool=claim_status_tool,
+        log_agent_failure_tool=log_agent_failure_tool,
     )
     return agent
 

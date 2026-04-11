@@ -22,11 +22,13 @@ class ClassificationAgent:
         fetch_images_tool,
         update_vehicle_status_tool,
         update_claim_status_tool,
+        log_agent_failure_tool,
         model_name: str = VISION_MODEL,
     ):
         self._fetch_images_tool = fetch_images_tool
         self._update_vehicle_status_tool = update_vehicle_status_tool
         self._update_claim_status_tool = update_claim_status_tool
+        self._log_agent_failure_tool = log_agent_failure_tool
         self._llm = create_model_instance(model_name=model_name, temperature=0)
         self._graph = self._build_graph()
 
@@ -169,6 +171,16 @@ class ClassificationAgent:
             dict - containing whether the claim was rejected and status of the operation
         """
         if state.status == "failed":
+            if state.retry_count >= 3:
+                print(f"  [Classification] Max retries exhausted! Sending claim {state.claim_id} to admin.")
+                try:
+                    self._update_claim_status_tool.invoke({
+                        "status": "under_review",
+                        "ai_verdict": f"Agent Failed: {state.error}",
+                    })
+                    self._log_agent_failure_tool.invoke(state.error or "Unknown network/LLM error")
+                except Exception as e:
+                    print(f"  Failed to set under_review status: {str(e)}")
             return {"claim_rejected": True, "status": "completed"}
 
         all_false = all(
