@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { adminClaimsService } from "../../services/admin-claims.service";
 import type { ClaimImage } from "../../types/admin-claims.types";
 
@@ -14,14 +14,10 @@ function formatBytes(bytes: number): string {
 }
 
 function ImageCard({ image }: { image: ClaimImage }) {
-  const [url, setUrl] = useState<string | null>(null);
+  const url = image.mime_type?.startsWith("image/") 
+    ? adminClaimsService.getImagePublicUrl(image.storage_path) 
+    : null;
   const [open, setOpen] = useState(false);
-
-  useEffect(() => {
-    if (image.mime_type?.startsWith("image/")) {
-      setUrl(adminClaimsService.getImagePublicUrl(image.storage_path));
-    }
-  }, [image]);
 
   return (
     <>
@@ -74,6 +70,7 @@ function ImageCard({ image }: { image: ClaimImage }) {
               className="w-full h-full object-contain rounded-xl"
             />
             <button
+              title="Close preview"
               onClick={() => setOpen(false)}
               className="absolute -top-4 -right-4 flex h-9 w-9 items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
             >
