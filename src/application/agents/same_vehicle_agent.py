@@ -7,7 +7,7 @@ from domain.prompts.same_vehicle_prompt import SAME_VEHICLE_SYSTEM_PROMPT
 from infrastructure.llm_providers.groq_provider import create_model_instance
 
 # Groq vision model for image analysis
-VISION_MODEL = "llama-3.2-90b-vision-preview"
+VISION_MODEL = "meta-llama/llama-4-scout-17b-16e-instruct"
 
 # AI verdict message when images show different vehicles
 REJECTION_VERDICT = (

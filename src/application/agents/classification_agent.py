@@ -6,7 +6,7 @@ from domain.prompts.classification_agent_prompt import vehicle_detection_prompt
 from infrastructure.llm_providers.groq_provider import create_model_instance
 
 # Groq vision model for image analysis
-VISION_MODEL = "llama-3.2-90b-vision-preview"
+VISION_MODEL = "meta-llama/llama-4-scout-17b-16e-instruct"
 
 # AI verdict message when all images lack a vehicle
 REJECTION_VERDICT = (
