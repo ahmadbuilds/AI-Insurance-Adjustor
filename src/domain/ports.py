@@ -191,3 +191,89 @@ class ClaimRepositoryPort(ABC):
             bool: True if the insert was successful, False otherwise.
         """
         pass
+
+    @abstractmethod
+    def fetch_classification_result(self, claim_id: str) -> dict | None:
+        """
+        Fetch the classification agent result for a claim.
+        Args:
+            claim_id: UUID of the claim.
+        Returns:
+            dict or None: The result row as a dict, or None if not found.
+        """
+        pass
+
+    @abstractmethod
+    def fetch_same_vehicle_result(self, claim_id: str) -> dict | None:
+        """
+        Fetch the same vehicle detection result for a claim.
+        Args:
+            claim_id: UUID of the claim.
+        Returns:
+            dict or None: The result row as a dict, or None if not found.
+        """
+        pass
+
+    @abstractmethod
+    def fetch_vehicle_type_result(self, claim_id: str) -> dict | None:
+        """
+        Fetch the vehicle type classification result for a claim.
+        Args:
+            claim_id: UUID of the claim.
+        Returns:
+            dict or None: The result row as a dict, or None if not found.
+        """
+        pass
+
+    @abstractmethod
+    def fetch_damage_detection_result(self, claim_id: str) -> dict | None:
+        """
+        Fetch the damage detection result for a claim.
+        Args:
+            claim_id: UUID of the claim.
+        Returns:
+            dict or None: The result row as a dict (including damage_details JSONB), or None if not found.
+        """
+        pass
+
+    @abstractmethod
+    def save_image_pipeline_result(
+        self,
+        claim_id: str,
+        user_id: str,
+        total_images: int,
+        vehicle_images_count: int,
+        non_vehicle_images_count: int,
+        is_same_vehicle: bool,
+        vehicle_type: str | None,
+        has_damage: bool,
+        images_with_damage: int,
+        damage_details: list[dict],
+        damage_summary: str | None,
+        all_checks_passed: bool,
+        pipeline_summary: str,
+        status: str,
+        error: str | None,
+    ) -> bool:
+        """
+        Save the image pipeline summary result to the image_pipeline_results table.
+        Args:
+            claim_id: UUID of the claim.
+            user_id: UUID of the user.
+            total_images: Total images submitted.
+            vehicle_images_count: Images containing a vehicle.
+            non_vehicle_images_count: Images not containing a vehicle.
+            is_same_vehicle: Whether all vehicle images show the same vehicle.
+            vehicle_type: Identified vehicle type or None.
+            has_damage: Whether damage was detected.
+            images_with_damage: Count of images with damage.
+            damage_details: Full structured damage data (JSONB).
+            damage_summary: Aggregated damage summary text.
+            all_checks_passed: Whether every pipeline check passed.
+            pipeline_summary: Human-readable summary of the full pipeline.
+            status: Agent status ('completed' or 'failed').
+            error: Error message if failed, else None.
+        Returns:
+            bool: True if successful.
+        """
+        pass
