@@ -277,3 +277,69 @@ class ClaimRepositoryPort(ABC):
             bool: True if successful.
         """
         pass
+
+    @abstractmethod
+    def fetch_claim_details(self, claim_id: str) -> dict | None:
+        """
+        Fetch the claim details (title, description, status) from the claims table.
+        Args:
+            claim_id: UUID of the claim.
+        Returns:
+            dict or None: The claim row as a dict, or None if not found.
+        """
+        pass
+
+    @abstractmethod
+    def fetch_image_pipeline_result(self, claim_id: str) -> dict | None:
+        """
+        Fetch the image pipeline summary result for a claim.
+        Args:
+            claim_id: UUID of the claim.
+        Returns:
+            dict or None: The pipeline summary row as a dict, or None if not found.
+        """
+        pass
+
+    @abstractmethod
+    def save_liability_result(
+        self,
+        claim_id: str,
+        user_id: str,
+        overall_confidence: float,
+        confidence_percentage: int,
+        scenario_plausibility: str,
+        scenario_reasoning: str,
+        damage_alignments: list[dict],
+        consistent_damages: int,
+        inconsistent_damages: int,
+        overall_reasoning: str,
+        recommendation: str,
+        flags: list[str],
+        needs_admin_review: bool,
+        admin_action: str | None,
+        status: str,
+        error: str | None,
+    ) -> bool:
+        """
+        Save the liability assessment result to the liability_results table.
+        Args:
+            claim_id: UUID of the claim.
+            user_id: UUID of the user.
+            overall_confidence: 0.0-1.0 confidence score.
+            confidence_percentage: 0-100 confidence percentage.
+            scenario_plausibility: 'plausible', 'questionable', or 'implausible'.
+            scenario_reasoning: Detailed scenario assessment text.
+            damage_alignments: Per-damage alignment analysis as JSONB.
+            consistent_damages: Number of consistent damages.
+            inconsistent_damages: Number of inconsistent damages.
+            overall_reasoning: Full reasoning text for the decision.
+            recommendation: 'approve', 'reject', or 'needs_human_review'.
+            flags: List of red flags or concerns.
+            needs_admin_review: Whether this requires admin review (confidence < 70%).
+            admin_action: Current admin action ('pending', 'accepted', 'overridden'), None if not under review.
+            status: Agent status ('completed' or 'failed').
+            error: Error message if failed, else None.
+        Returns:
+            bool: True if successful.
+        """
+        pass
