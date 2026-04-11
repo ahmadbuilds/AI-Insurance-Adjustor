@@ -212,8 +212,6 @@ class ClassificationAgent:
             claim_id=claim_id,
             user_id=user_id,
         )
-
-        self.build_graph_image()
         result = self._graph.invoke(initial_state)
         return result
 
