@@ -30,3 +30,13 @@ VehicleTypeStatus = Literal[
 ]
 
 VehicleTypeCategory = Literal["PC", "MC", "CT", "EV", "CV", "SV", "OV", "UNKNOWN"]
+
+# Damage detection agent status lifecycle
+DamageDetectionStatus = Literal[
+    "pending",
+    "fetching_vehicle_images",
+    "analyzing",
+    "completed",
+    "failed"
+]
+

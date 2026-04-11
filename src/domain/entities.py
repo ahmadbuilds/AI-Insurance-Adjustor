@@ -42,3 +42,19 @@ class ClassificationResult(BaseModel):
 class VehicleTypeClassification(BaseModel):
     image_id:str=Field(description="The image record ID that was classified")
     vehicle_type:str=Field(description="The classified vehicle type category")
+
+
+# A single damage detected on a vehicle part
+class DamageItem(BaseModel):
+    part:str=Field(description="The vehicle part affected (e.g., 'front bumper', 'left headlight', 'hood', 'right fender', 'windshield')")
+    damage_type:str=Field(description="Type of damage observed (e.g., 'dent', 'scratch', 'crack', 'shatter', 'deformation', 'paint_damage', 'corrosion', 'puncture')")
+    severity:str=Field(description="Damage severity level: 'minor', 'moderate', or 'severe'")
+    description:str=Field(description="Detailed natural-language description of the damage appearance, approximate size, shape, and notable characteristics")
+
+
+# Per-image damage analysis result
+class ImageDamageResult(BaseModel):
+    image_id:str=Field(description="The image record ID that was analyzed for damage")
+    has_damage:bool=Field(description="Whether any damage was detected in this image")
+    damages:list[DamageItem]=Field(default_factory=list, description="List of individual damages detected in the image, empty if has_damage is False")
+    damage_summary:str=Field(default="", description="One-line natural-language summary of all damage found in this image")
