@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import Navbar from "@/components/Navbar";
@@ -271,6 +270,7 @@ export default function ProfilePage() {
             </svg>
             <span className="flex-1">{message.text}</span>
             <button
+              title="Dismiss notification"
               onClick={() => setMessage(null)}
               className="text-white/40 hover:text-white transition-colors"
             >
