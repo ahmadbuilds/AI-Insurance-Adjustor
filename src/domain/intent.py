@@ -40,3 +40,11 @@ DamageDetectionStatus = Literal[
     "failed"
 ]
 
+# Image pipeline summary agent status lifecycle
+ImagePipelineSummaryStatus = Literal[
+    "pending",
+    "fetching_results",
+    "aggregating",
+    "completed",
+    "failed"
+]
