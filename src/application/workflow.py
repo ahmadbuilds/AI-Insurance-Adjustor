@@ -12,6 +12,7 @@ CLASSIFICATION_STREAM="stream:task:classification"
 SAME_VEHICLE_STREAM="stream:task:same_vehicle"
 VEHICLE_TYPE_STREAM="stream:task:vehicle_type"
 DAMAGE_DETECTION_STREAM="stream:task:damage_detection"
+PIPELINE_SUMMARY_STREAM="stream:task:image_pipeline_summary"
 LIABILITY_STREAM="stream:task:liability"
 
 #redis consumer group name and consumer name for processing new claim events
@@ -120,12 +121,23 @@ def run_workflow():
                             print(f"Damage detection agent completed for claim {claim_id}")
 
                             if claim_rejected=="False":
+                                #route to image pipeline summary
+                                payload=ClaimEvent(claim_id=claim_id,User_id=user_id).model_dump()
+                                publish_to_stream(PIPELINE_SUMMARY_STREAM, payload)
+                                print(f"Routed claim {claim_id} to image pipeline summary")
+                            else:
+                                print(f"Claim {claim_id} was rejected by damage detection — no further processing")
+
+                        elif source_task=="image_pipeline_summary":
+                            print(f"Image pipeline summary completed for claim {claim_id}")
+
+                            if claim_rejected=="False":
                                 #TODO: route to liability assessment stream when that agent is ready
                                 #payload=ClaimEvent(claim_id=claim_id,User_id=user_id).model_dump()
                                 #publish_to_stream(LIABILITY_STREAM, payload)
-                                print(f"Damage detection passed — awaiting liability agent implementation")
+                                print(f"Image pipeline summary passed — awaiting liability agent implementation")
                             else:
-                                print(f"Claim {claim_id} was rejected by damage detection — no further processing")
+                                print(f"Claim {claim_id} was rejected by image pipeline summary — no further processing")
 
                         #sending the ack to redis to mark the message as processed
                         redis.xack(RESULT_STREAM, GROUP_NAME, message_id)
