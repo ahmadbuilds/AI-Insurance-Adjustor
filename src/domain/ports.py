@@ -162,3 +162,32 @@ class ClaimRepositoryPort(ABC):
         """
         pass
 
+    @abstractmethod
+    def save_damage_detection_result(
+        self,
+        claim_id: str,
+        user_id: str,
+        images_analyzed: int,
+        images_with_damage: int,
+        claim_rejected: bool,
+        damage_details: list[dict],
+        damage_summary: str | None,
+        status: str,
+        error: str | None,
+    ) -> bool:
+        """
+        Save the damage detection agent result to the damage_detection_results table.
+        Args:
+            claim_id: UUID of the claim that was processed.
+            user_id: UUID of the user who filed the claim.
+            images_analyzed: Total number of vehicle images analyzed for damage.
+            images_with_damage: Number of images where damage was detected.
+            claim_rejected: Whether the claim was rejected (no images had damage).
+            damage_details: Serialized list of per-image damage results (ImageDamageResult dicts).
+            damage_summary: Aggregated natural-language summary of all detected damages.
+            status: Agent status ('completed' or 'failed').
+            error: Error message if the agent failed, None otherwise.
+        Returns:
+            bool: True if the insert was successful, False otherwise.
+        """
+        pass
