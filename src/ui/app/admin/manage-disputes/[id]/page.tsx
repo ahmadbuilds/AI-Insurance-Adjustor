@@ -142,8 +142,6 @@ function StatusUpdatePanel({
   disputeId,
   claimId,
   currentStatus,
-  userEmail,
-  username,
   onUpdated,
 }: {
   disputeId: string;

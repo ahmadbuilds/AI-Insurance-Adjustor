@@ -18,8 +18,6 @@ export default function ClaimsPage() {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [user, setUser] = useState<any | null>(null); 
-
   useEffect(() => {
     async function getUser() {
       const supabase = createClient();
@@ -27,7 +25,6 @@ export default function ClaimsPage() {
         data: { user },
       } = await supabase.auth.getUser();
       if (!user) router.push("/login");
-      else setUser(user);
     }
     getUser();
   }, [router]);
@@ -190,6 +187,7 @@ export default function ClaimsPage() {
             </svg>
             <span className="flex-1">{success || error}</span>
             <button
+              title="Dismiss notification"
               onClick={() => { setSuccess(null); setError(null); }}
               className="text-white/40 hover:text-white transition-colors"
             >

@@ -22,6 +22,15 @@ export interface ClaimImage {
   created_at: string;
 }
 
+export interface AdminNotification {
+  id: string;
+  claim_id: string;
+  message: string;
+  failed_task: string;
+  is_resolved: boolean;
+  created_at: string;
+}
+
 export interface AdminClaim {
   id: string;
   user_id: string;
@@ -37,6 +46,7 @@ export interface AdminClaim {
 
 export interface AdminClaimDetail extends AdminClaim {
   images: ClaimImage[];
+  active_notification: AdminNotification | null;
 }
 
 export interface ClaimFilterState {

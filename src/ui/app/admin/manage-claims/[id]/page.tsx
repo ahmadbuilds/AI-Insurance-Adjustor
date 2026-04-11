@@ -12,6 +12,7 @@ import { UserInfoCard } from "./components/UserInfoCard";
 import { AiVerdictCard } from "./components/AiVerdictCard";
 import { ClaimImagesGrid } from "./components/ClaimImagesGrid";
 import { StatusUpdatePanel } from "./components/StatusUpdatePanel";
+import { ManualInterventionPanel } from "./components/ManualInterventionPanel";
 import type { AdminClaimDetail, ClaimStatus } from "../types/admin-claims.types";
 
 function formatDate(iso: string) {
@@ -174,6 +175,16 @@ export default function ClaimDetailPage() {
 
                 {/* AI Verdict */}
                 <AiVerdictCard verdict={claim.ai_verdict} status={claim.status} />
+
+                {/* Manual Intervention Panel — shown when an agent failed */}
+                {claim.active_notification && (
+                  <ManualInterventionPanel
+                    notification={claim.active_notification}
+                    claimId={claim.id}
+                    images={claim.images}
+                    onResolved={() => loadClaim()}
+                  />
+                )}
 
                 {/* Images */}
                 <ClaimImagesGrid images={claim.images} />
