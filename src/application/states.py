@@ -1,7 +1,7 @@
 from pydantic import BaseModel, Field
 from typing import Optional
-from domain.intent import ClassificationStatus, SameVehicleStatus, VehicleTypeStatus
-from domain.entities import ImageWithUrl, ClassificationResult, VehicleTypeClassification
+from domain.intent import ClassificationStatus, SameVehicleStatus, VehicleTypeStatus, DamageDetectionStatus
+from domain.entities import ImageWithUrl, ClassificationResult, VehicleTypeClassification, ImageDamageResult
 
 # Classification Agent State for Vehicle Detection in Insurance Claims
 class ClassificationAgentState(BaseModel):
@@ -37,3 +37,14 @@ class VehicleTypeAgentState(BaseModel):
     error: Optional[str] = Field(default=None, description="Error message if the agent failed")
     retry_count: int = Field(default=0, description="Counter for retry attempts on failure")
 
+# Damage Detection Agent State
+class DamageDetectionAgentState(BaseModel):
+    claim_id: str = Field(description="The claim being processed")
+    user_id: str = Field(description="The user who filed the claim")
+    vehicle_images: list[ImageWithUrl] = Field(default_factory=list, description="Images that contain vehicles")
+    damage_results: list[ImageDamageResult] = Field(default_factory=list, description="Per-image damage analysis results")
+    damage_summary: Optional[str] = Field(default=None, description="Aggregated natural-language summary of all detected damages across all images")
+    claim_rejected: bool = Field(default=False, description="True if the claim was rejected because no images showed any damage")
+    status: DamageDetectionStatus = Field(default="pending", description="Current stage in the agent lifecycle")
+    error: Optional[str] = Field(default=None, description="Error message if the agent failed")
+    retry_count: int = Field(default=0, description="Counter for retry attempts on failure")
