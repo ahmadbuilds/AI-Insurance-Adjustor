@@ -22,6 +22,13 @@ app.add_middleware(
     allow_credentials=True,
 )
 
+try:
+    from src.infrastructure.socket.socket_server import socket_app
+except ModuleNotFoundError:
+    from infrastructure.socket.socket_server import socket_app
+
+app.mount("/socket.io", socket_app)
+
 @app.post("/publish_event",status_code=status.HTTP_202_ACCEPTED)
 async def publish_event_endpoint(event_data:dict,authorization: str = Header(...)):
     if not authorization:
@@ -44,4 +51,38 @@ async def publish_event_endpoint(event_data:dict,authorization: str = Header(...
     return{
         "status":"success",
         "message":f"Event published to stream {stream_name}"
+    }
+
+@app.post("/resume_workflow",status_code=status.HTTP_202_ACCEPTED)
+async def resume_workflow_endpoint(event_data:dict,authorization: str = Header(...)):
+    if not authorization:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,detail="Authorization header missing")
+    
+    token=authorization.replace("Bearer ","").replace("bearer ","").strip()
+    user=get_user_from_token(token)
+    if not user:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,detail="Invalid token")
+
+    claim_id = event_data.get("claim_id")
+    source_task = event_data.get("source_task")#task which has been failed
+
+    if not claim_id or not source_task:
+        raise HTTPException(status_code=400, detail="Missing claim_id or source_task")
+    
+    # Simulate the agent passing
+    payload_data = {
+        "claim_id": claim_id,
+        "User_id": user.id,
+        "source_task": source_task,
+        "claim_rejected": "False"
+    }
+
+    stream_name = "stream:events:claim_results"
+    result = publish_to_stream(stream_name, payload_data)
+    if not result:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,detail="Failed to resume workflow")
+
+    return{
+        "status":"success",
+        "message":f"Workflow resumed on stream {stream_name}"
     }
