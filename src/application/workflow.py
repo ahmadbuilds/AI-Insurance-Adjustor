@@ -11,6 +11,7 @@ NEW_CLAIM_STREAM="stream:events:new_claims"
 CLASSIFICATION_STREAM="stream:task:classification"
 SAME_VEHICLE_STREAM="stream:task:same_vehicle"
 VEHICLE_TYPE_STREAM="stream:task:vehicle_type"
+DAMAGE_DETECTION_STREAM="stream:task:damage_detection"
 LIABILITY_STREAM="stream:task:liability"
 
 #redis consumer group name and consumer name for processing new claim events
@@ -108,12 +109,23 @@ def run_workflow():
                             print(f"Vehicle type classification agent completed for claim {claim_id}")
 
                             if claim_rejected=="False":
+                                #route to damage detection
+                                payload=ClaimEvent(claim_id=claim_id,User_id=user_id).model_dump()
+                                publish_to_stream(DAMAGE_DETECTION_STREAM, payload)
+                                print(f"Routed claim {claim_id} to damage detection")
+                            else:
+                                print(f"Claim {claim_id} was rejected by vehicle type classification — no further processing")
+
+                        elif source_task=="damage_detection":
+                            print(f"Damage detection agent completed for claim {claim_id}")
+
+                            if claim_rejected=="False":
                                 #TODO: route to liability assessment stream when that agent is ready
                                 #payload=ClaimEvent(claim_id=claim_id,User_id=user_id).model_dump()
                                 #publish_to_stream(LIABILITY_STREAM, payload)
-                                print(f"Vehicle type check passed — awaiting liability agent implementation")
+                                print(f"Damage detection passed — awaiting liability agent implementation")
                             else:
-                                print(f"Claim {claim_id} was rejected by vehicle type classification — no further processing")
+                                print(f"Claim {claim_id} was rejected by damage detection — no further processing")
 
                         #sending the ack to redis to mark the message as processed
                         redis.xack(RESULT_STREAM, GROUP_NAME, message_id)
