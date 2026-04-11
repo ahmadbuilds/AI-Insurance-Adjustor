@@ -343,6 +343,36 @@ CREATE POLICY "Admins can view all vehicle type results"
 
 
 -- ============================================
+-- 10e. Admin Notifications table
+-- Stores agent failures and fallback alerts for administrators
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS public.admin_notifications (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  claim_id UUID NOT NULL REFERENCES public.claims(id) ON DELETE CASCADE,
+  message TEXT NOT NULL,
+  failed_task TEXT NOT NULL,
+  is_resolved BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  resolved_at TIMESTAMPTZ
+);
+
+-- Enable RLS on admin_notifications table
+ALTER TABLE public.admin_notifications ENABLE ROW LEVEL SECURITY;
+
+-- Admins can view all notifications
+CREATE POLICY "Admins can view admin notifications"
+  ON public.admin_notifications FOR SELECT
+  USING (public.is_admin());
+
+-- Admins can update notifications (to resolve them)
+CREATE POLICY "Admins can update admin notifications"
+  ON public.admin_notifications FOR UPDATE
+  USING (public.is_admin())
+  WITH CHECK (public.is_admin());
+
+
+-- ============================================
 -- 11. Storage RLS policies for claim_images bucket
 -- Make sure the bucket "claim_images" exists in Supabase Storage dashboard
 -- ============================================
