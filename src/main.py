@@ -155,3 +155,114 @@ async def resolve_liability_endpoint(event_data: dict, authorization: str = Head
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to resolve liability: {str(e)}"
         )
+
+@app.post("/upload_policy", status_code=status.HTTP_200_OK)
+async def upload_policy_endpoint(event_data: dict, authorization: str = Header(...)):
+    if not authorization:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Authorization header missing")
+
+    token = authorization.replace("Bearer ", "").replace("bearer ", "").strip()
+    user = get_user_from_token(token)
+    if not user:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
+
+    policy_content = event_data.get("policy_text")
+    if not policy_content:
+        raise HTTPException(status_code=400, detail="Missing policy_text")
+
+    try:
+        from application.services.ingestion import IngestionService
+        from infrastructure.adapters.redis_document_store import RedisDocumentStore
+        from infrastructure.adapters.chroma_store import ChromaVectorStore
+        from infrastructure.redis.redis_client import get_redis_client
+
+        redis_client = get_redis_client()
+        redis_store = RedisDocumentStore(redis_client)
+        vector_store = ChromaVectorStore()
+        
+        service = IngestionService(redis_store=redis_store, vector_store=vector_store)
+        
+        status_change = service.has_document_changed(policy_content)
+        
+        if status_change == "no_policy":
+            success = service.handle_new_policy_upload(policy_content)
+        elif status_change == "changed":
+            success = service.handle_policy_update(policy_content)
+        else:
+            return {"status": "success", "message": "Policy has not changed."}
+
+        if not success:
+             raise HTTPException(status_code=500, detail="Failed to process policy document")
+
+        return {"status": "success", "message": "Policy uploaded and processed successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/resolve_rag", status_code=status.HTTP_200_OK)
+async def resolve_rag_endpoint(event_data: dict, authorization: str = Header(...)):
+    if not authorization:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Authorization header missing")
+
+    token = authorization.replace("Bearer ", "").replace("bearer ", "").strip()
+    user = get_user_from_token(token)
+    if not user:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
+
+    claim_id = event_data.get("claim_id")
+    action = event_data.get("action")
+
+    if not claim_id or action not in ("payment_approved", "rejected"):
+        raise HTTPException(status_code=400, detail="Missing claim_id or invalid action")
+
+    try:
+        from infrastructure.supabase.supabase_client import get_service_client
+        from infrastructure.adapters.combined_adapter import CombinedSupabaseAdapter
+
+        service_client = get_service_client()
+        adapter = CombinedSupabaseAdapter(client=service_client)
+
+        # Update rag_results admin_action
+        service_client.table("rag_results").update({
+            "admin_action": action
+        }).eq("claim_id", claim_id).execute()
+
+        new_status = "approved" if action == "payment_approved" else "rejected"
+        ai_verdict = "Payment Approved by Admin." if action == "payment_approved" else "Claim rejected after admin review of RAG policy assessment."
+
+        adapter.update_claim_status(
+            claim_id=claim_id,
+            status=new_status,
+            ai_verdict=ai_verdict
+        )
+
+        return {
+            "status": "success",
+            "message": f"RAG decision resolved as {action}",
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/policy_status", status_code=status.HTTP_200_OK)
+async def policy_status_endpoint(authorization: str = Header(...)):
+    if not authorization:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Authorization header missing")
+
+    try:
+        from infrastructure.adapters.redis_document_store import RedisDocumentStore
+        from infrastructure.redis.redis_client import get_redis_client
+
+        redis_client = get_redis_client()
+        if not redis_client:
+            return {"status": "error", "message": "Redis client unavailable", "version": None}
+            
+        redis_store = RedisDocumentStore(redis_client)
+        version_name = redis_store.get_document_version_name()
+        
+        return {
+            "status": "success",
+            "version": version_name
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
