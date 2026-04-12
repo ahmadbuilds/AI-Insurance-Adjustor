@@ -57,3 +57,13 @@ LiabilityStatus = Literal[
     "completed",
     "failed"
 ]
+
+# RAG assessment agent status lifecycle
+RAGStatus = Literal[
+    "pending",
+    "fetching_data",
+    "querying_policy",
+    "analyzing_coverage",
+    "completed",
+    "failed"
+]

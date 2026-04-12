@@ -102,3 +102,15 @@ class LiabilityAssessment(BaseModel):
     recommendation:str=Field(description="Agent recommendation: 'approve', 'reject', or 'needs_human_review'")
     flags:list[str]=Field(default_factory=list, description="List of specific red flags or concerns identified during analysis")
 
+
+# RAG assessment result evaluating the claim against the insurance policy
+class RAGAssessment(BaseModel):
+    policy_covered:bool=Field(description="Whether the insurance policy covers this incident/damage")
+    coverage_type:Optional[str]=Field(default=None, description="Type of coverage that applies (e.g., 'comprehensive', 'collision')")
+    applicable_sections:list[str]=Field(default_factory=list, description="List of policy section headers or clauses that apply")
+    exclusions:list[str]=Field(default_factory=list, description="List of policy exclusions that were considered")
+    compensation_amount:float=Field(description="Calculated total compensation amount based on policy limits and deductibles")
+    compensation_breakdown:list[dict]=Field(default_factory=list, description="Breakdown of compensation per damage item")
+    coverage_reasoning:str=Field(description="Detailed reasoning explaining how the policy applies and how the amount was calculated")
+    recommendation:str=Field(description="Agent recommendation: 'approve_payment', 'reject_no_coverage', or 'needs_human_review'")
+    flags:list[str]=Field(default_factory=list, description="List of red flags or concerns regarding policy interpretation")
