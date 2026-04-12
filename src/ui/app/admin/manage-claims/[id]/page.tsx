@@ -13,6 +13,7 @@ import { AiVerdictCard } from "./components/AiVerdictCard";
 import { ClaimImagesGrid } from "./components/ClaimImagesGrid";
 import { StatusUpdatePanel } from "./components/StatusUpdatePanel";
 import { ManualInterventionPanel } from "./components/ManualInterventionPanel";
+import { RAGResultCard } from "./components/RAGResultCard";
 import type { AdminClaimDetail, ClaimStatus } from "../types/admin-claims.types";
 
 function formatDate(iso: string) {
@@ -42,6 +43,7 @@ export default function ClaimDetailPage() {
   const [authorized, setAuthorized] = useState(false);
   const [checking,   setChecking]   = useState(true);
   const [claim,      setClaim]      = useState<AdminClaimDetail | null>(null);
+  const [ragResult,  setRagResult]  = useState<any | null>(null);
   const [loading,    setLoading]    = useState(true);
   const [error,      setError]      = useState<string | null>(null);
 
@@ -63,6 +65,8 @@ export default function ClaimDetailPage() {
     try {
       const data = await adminClaimsService.fetchClaimDetail(claimId);
       setClaim(data);
+      const rag = await adminClaimsService.fetchRAGResult(claimId);
+      setRagResult(rag);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load claim.");
     } finally {
@@ -175,6 +179,16 @@ export default function ClaimDetailPage() {
 
                 {/* AI Verdict */}
                 <AiVerdictCard verdict={claim.ai_verdict} status={claim.status} />
+
+                {/* RAG Result Card */}
+                {ragResult && (
+                  <RAGResultCard
+                    claimId={claim.id}
+                    ragResult={ragResult}
+                    status={claim.status}
+                    onResolved={() => loadClaim()}
+                  />
+                )}
 
                 {/* Manual Intervention Panel — shown when an agent failed */}
                 {claim.active_notification && (
