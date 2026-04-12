@@ -18,7 +18,6 @@ class CombinedSupabaseAdapter(ImageRepositoryPort, ImageStoragePort, ClaimReposi
         self._image_adapter = SupabaseImageAdapter(client, bucket_name)
         self._claim_adapter = SupabaseClaimAdapter(client)
         self._results_adapter = SupabaseResultsAdapter(client)
-        # Keep direct client reference for any ad-hoc queries (e.g., admin action updates)
         self._client = client
 
     # Image repository delegates
@@ -78,3 +77,12 @@ class CombinedSupabaseAdapter(ImageRepositoryPort, ImageStoragePort, ClaimReposi
 
     def save_liability_result(self, claim_id, user_id, overall_confidence, confidence_percentage, scenario_plausibility, scenario_reasoning, damage_alignments, consistent_damages, inconsistent_damages, overall_reasoning, recommendation, flags, needs_admin_review, admin_action, status, error):
         return self._results_adapter.save_liability_result(claim_id, user_id, overall_confidence, confidence_percentage, scenario_plausibility, scenario_reasoning, damage_alignments, consistent_damages, inconsistent_damages, overall_reasoning, recommendation, flags, needs_admin_review, admin_action, status, error)
+
+    def fetch_liability_result(self, claim_id: str) -> dict | None:
+        return self._results_adapter.fetch_liability_result(claim_id)
+
+    def save_rag_result(self, claim_id: str, user_id: str, policy_covered: bool, coverage_type: str | None, applicable_sections: list[str], exclusions: list[str], compensation_amount: float, compensation_breakdown: list[dict], coverage_reasoning: str, recommendation: str, flags: list[str], needs_admin_review: bool, admin_action: str | None, status: str, error: str | None) -> bool:
+        return self._results_adapter.save_rag_result(claim_id, user_id, policy_covered, coverage_type, applicable_sections, exclusions, compensation_amount, compensation_breakdown, coverage_reasoning, recommendation, flags, needs_admin_review, admin_action, status, error)
+
+    def fetch_rag_result(self, claim_id: str) -> dict | None:
+        return self._results_adapter.fetch_rag_result(claim_id)
