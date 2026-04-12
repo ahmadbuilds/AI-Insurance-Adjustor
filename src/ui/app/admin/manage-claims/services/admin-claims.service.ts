@@ -189,6 +189,42 @@ class AdminClaimsService {
     }
   }
 
+  public async fetchRAGResult(claimId: string): Promise<any | null> {
+    const supabase = createClient();
+    const { data, error } = await supabase
+      .from("rag_results")
+      .select("*")
+      .eq("claim_id", claimId)
+      .maybeSingle();
+
+    if (error) throw new Error(error.message);
+    return data;
+  }
+
+  public async resolveRAGDecision(claimId: string, action: "payment_approved" | "rejected"): Promise<void> {
+    const supabase = createClient();
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) throw new Error("Not authenticated.");
+
+    const FASTAPI_URL = process.env.NEXT_PUBLIC_FASTAPI_URL || "http://127.0.0.1:8000";
+    const res = await fetch(`${FASTAPI_URL}/resolve_rag`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({
+        claim_id: claimId,
+        action: action,
+      }),
+    });
+
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body.detail || "Failed to resolve RAG decision.");
+    }
+  }
+
   
 
   
