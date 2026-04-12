@@ -330,6 +330,39 @@ export default async function DashboardPage() {
                   </div>
                 </div>
               </Link>
+
+              {/* Manage Policy */}
+              <Link
+                href="/admin/services/policy"
+                className="group relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-white/5 to-white/[0.02] p-6 hover:border-blue-400/30 transition-all"
+              >
+                <div className="absolute -top-6 -right-6 w-24 h-24 bg-blue-400/10 rounded-full blur-2xl opacity-0 group-hover:opacity-100 transition-opacity" />
+                <div className="relative flex items-start gap-4">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-400/15 ring-1 ring-blue-400/25">
+                    <svg
+                      className="h-5 w-5 text-blue-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                      />
+                    </svg>
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-semibold text-white mb-1">
+                      Manage Policy
+                    </h3>
+                    <p className="text-xs text-white/40">
+                      Upload and manage the RAG policy doc.
+                    </p>
+                  </div>
+                </div>
+              </Link>
             </div>
           </div>
         )}
