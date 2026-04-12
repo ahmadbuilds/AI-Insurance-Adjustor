@@ -1,7 +1,7 @@
 from pydantic import BaseModel, Field
 from typing import Optional
-from domain.intent import ClassificationStatus, SameVehicleStatus, VehicleTypeStatus, DamageDetectionStatus, ImagePipelineSummaryStatus, LiabilityStatus
-from domain.entities import ImageWithUrl, ClassificationResult, VehicleTypeClassification, ImageDamageResult, ImagePipelineSummary, LiabilityAssessment
+from domain.intent import ClassificationStatus, SameVehicleStatus, VehicleTypeStatus, DamageDetectionStatus, ImagePipelineSummaryStatus, LiabilityStatus,RAGStatus
+from domain.entities import ImageWithUrl, ClassificationResult, VehicleTypeClassification, ImageDamageResult, ImagePipelineSummary, LiabilityAssessment ,RAGAssessment
 
 # Classification Agent State for Vehicle Detection in Insurance Claims
 class ClassificationAgentState(BaseModel):
@@ -71,5 +71,18 @@ class LiabilityAgentState(BaseModel):
     assessment: Optional[LiabilityAssessment] = Field(default=None, description="The LLM's liability assessment output")
     needs_admin_review: bool = Field(default=False, description="True if confidence < 70% and requires admin review")
     status: LiabilityStatus = Field(default="pending", description="Current stage in the agent lifecycle")
+    error: Optional[str] = Field(default=None, description="Error message if the agent failed")
+    retry_count: int = Field(default=0, description="Counter for retry attempts on failure")
+
+# RAG Assessment Agent State
+class RAGAgentState(BaseModel):
+    claim_id: str = Field(description="The claim being processed")
+    user_id: str = Field(description="The user who filed the claim")
+    claim_details: Optional[dict] = Field(default=None, description="Raw claim details from claims table")
+    liability_result: Optional[dict] = Field(default=None, description="Raw liability result from DB")
+    pipeline_result: Optional[dict] = Field(default=None, description="Raw image pipeline summary result from DB")
+    policy_sections: list[dict] = Field(default_factory=list, description="Retrieved policy sections")
+    assessment: Optional[RAGAssessment] = Field(default=None, description="The LLM's RAG assessment output")
+    status: RAGStatus = Field(default="pending", description="Current stage in the agent lifecycle")
     error: Optional[str] = Field(default=None, description="Error message if the agent failed")
     retry_count: int = Field(default=0, description="Counter for retry attempts on failure")
