@@ -369,10 +369,49 @@ class SupabaseResultsAdapter(ClaimRepositoryPort):
         )
         return bool(response.data)
 
+    def fetch_liability_result(self, claim_id: str) -> dict | None:
+        try:
+            res = self._client.table("liability_results").select("*").eq("claim_id", claim_id).maybe_single().execute()
+            return res.data if res else None
+        except Exception:
+            return None
+
+    def save_rag_result(self, claim_id: str, user_id: str, policy_covered: bool, coverage_type: str | None, applicable_sections: list[str], exclusions: list[str], compensation_amount: float, compensation_breakdown: list[dict], coverage_reasoning: str, recommendation: str, flags: list[str], needs_admin_review: bool, admin_action: str | None, status: str, error: str | None) -> bool:
+        """Insert a RAG assessment result into the rag_results table."""
+        try:
+            data = {
+                "claim_id": claim_id,
+                "user_id": user_id,
+                "policy_covered": policy_covered,
+                "coverage_type": coverage_type,
+                "applicable_sections": json.dumps(applicable_sections),
+                "exclusions": json.dumps(exclusions),
+                "compensation_amount": compensation_amount,
+                "compensation_breakdown": json.dumps(compensation_breakdown),
+                "coverage_reasoning": coverage_reasoning,
+                "recommendation": recommendation,
+                "flags": json.dumps(flags),
+                "needs_admin_review": needs_admin_review,
+                "admin_action": admin_action,
+                "status": status,
+                "error": error,
+            }
+            self._client.table("rag_results").insert(data).execute()
+            return True
+        except Exception as e:
+            print(f"Supabase save_rag_result failed: {e}")
+            return False
+
+    def fetch_rag_result(self, claim_id: str) -> dict | None:
+        """Fetch the most recent RAG assessment result for a claim."""
+        try:
+            res = self._client.table("rag_results").select("*").eq("claim_id", claim_id).maybe_single().execute()
+            return res.data if res else None
+        except Exception:
+            return None
+
     
-    #these stubs are never called because when using CombinedSupabaseAdapter
-    # the claim-level methods delegate to SupabaseClaimAdapter, 
-    # and the result save/fetch methods delegate to SupabaseResultsAdapter.
+    #These stubs are never called when using CombinedSupabaseAdapter
     def update_claim_status(self, *args, **kwargs) -> bool:
         raise NotImplementedError("Use SupabaseClaimAdapter or CombinedSupabaseAdapter")
 
