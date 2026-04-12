@@ -144,17 +144,26 @@ def run_workflow():
                             needs_admin_review=message_data.get("needs_admin_review","False")
 
                             if needs_admin_review=="True":
-                                #confidence < 70% — admin will decide via the resolve endpoint
+                                #confidence < 70%  admin will decide via the resolve endpoint
                                 print(f"Claim {claim_id} flagged for admin review (low confidence)")
                             elif claim_rejected=="False":
                                 #confidence >= 70% — claim passed liability
-                                #TODO: route to RAG agent stream when ready
-                                #RAG_STREAM="stream:task:rag"
-                                #payload=ClaimEvent(claim_id=claim_id,User_id=user_id).model_dump()
-                                #publish_to_stream(RAG_STREAM, payload)
-                                print(f"Liability passed — awaiting RAG agent implementation")
+                                RAG_STREAM="stream:task:rag"
+                                payload=ClaimEvent(claim_id=claim_id,User_id=user_id).model_dump()
+                                publish_to_stream(RAG_STREAM, payload)
+                                print(f"Liability passed — routed to RAG agent stream")
                             else:
                                 print(f"Claim {claim_id} was rejected by liability assessment")
+
+                        elif source_task=="rag_assessment":
+                            print(f"RAG assessment completed for claim {claim_id}")
+                            needs_admin_review=message_data.get("needs_admin_review","False")
+                            policy_covered=message_data.get("policy_covered","False")
+
+                            if needs_admin_review=="True" and policy_covered=="True":
+                                print(f"Claim {claim_id} covered by policy — awaiting admin payment decision")
+                            elif policy_covered=="False":
+                                print(f"Claim {claim_id} rejected by RAG due to no policy coverage")
 
                         #sending the ack to redis to mark the message as processed
                         redis.xack(RESULT_STREAM, GROUP_NAME, message_id)
