@@ -17,7 +17,9 @@ class RedisDocumentStore(DocumentStorePort):
     def get_document_version_name(self) -> str | None:
         try:
             val = self.redis.get(self.version_key)
-            return val.decode("utf-8") if val else None
+            if val is None:
+                return None
+            return val if isinstance(val, str) else val.decode("utf-8")
         except redis.exceptions.RedisError as e:
             print(f"Redis get_document_version_name error: {e}")
             return None
@@ -33,7 +35,9 @@ class RedisDocumentStore(DocumentStorePort):
     def get_document_hash(self, document_id: str) -> str | None:
         try:
             val = self.redis.hget(self.doc_hash_key, document_id)
-            return val.decode("utf-8") if val else None
+            if val is None:
+                return None
+            return val if isinstance(val, str) else val.decode("utf-8")
         except redis.exceptions.RedisError as e:
             print(f"Redis get_document_hash error: {e}")
             return None
