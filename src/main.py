@@ -1,7 +1,11 @@
 from fastapi import FastAPI,HTTPException,Header,status
 from fastapi.middleware.cors import CORSMiddleware
-import config
-from domain.entities import ClaimEvent
+try:
+    import config
+    from domain.entities import ClaimEvent
+except ModuleNotFoundError:
+    from src import config
+    from src.domain.entities import ClaimEvent
 
 try:
     from src.infrastructure.redis.redis_client import publish_to_stream

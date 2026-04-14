@@ -1,6 +1,10 @@
 import os 
 import redis
-import config 
+
+try:
+    import config 
+except ModuleNotFoundError:
+    from src import config
 
 
 REDIS_HOST=os.getenv('REDIS_HOST', 'localhost')
