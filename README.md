@@ -73,7 +73,7 @@ Worker architecture:
 
 This diagram focuses on the agent worker topology and how the workflow orchestrator routes tasks across agents. Use it to understand the worker boundaries and the main decision flow between steps.
 
-![AI Agent Workers](src/pics/AI%20Agent%20Workers%20Archtecture.png)
+<img src="src/pics/AI%20Agent%20Workers%20Archtecture.png" alt="AI Agent Workers" height="360" />
 
 Redis stream flow:
 
@@ -87,43 +87,43 @@ Agent details (each includes its diagram and purpose):
 
 The `classification_agent` determines the claim category and initial routing decision. It inspects the incoming claim payload, normalizes key attributes, and sets the downstream workflow path so only the relevant agents run.
 
-<img src="src/pics/Classification%20Agent.png" alt="Classification Agent" width="300" />
+<img src="src/pics/Classification%20Agent.png" alt="Classification Agent" height="220" />
 
 ### Damage Detection Agent
 
 The `damage_detection_agent` analyzes claim images for damage signals. It produces a structured damage assessment that is later used by liability, coverage checks, and the final summary.
 
-<img src="src/pics/Damage%20Detection%20Agent.png" alt="Damage Detection Agent" width="300" />
+<img src="src/pics/Damage%20Detection%20Agent.png" alt="Damage Detection Agent" height="220" />
 
 ### Liability Agent
 
 The `liability_agent` evaluates fault and responsibility using the claim narrative, context, and any available supporting data. It returns a liability decision or marks the claim for admin review when confidence is low.
 
-<img src="src/pics/Liability%20Agent.png" alt="Liability Agent" width="300" />
+<img src="src/pics/Liability%20Agent.png" alt="Liability Agent" height="220" />
 
 ### RAG Agent
 
 The `rag_agent` retrieves policy sections from the vector store and checks coverage rules. It produces a policy-based decision with rationale, including approvals or rejections tied to the retrieved policy context.
 
-<img src="src/pics/Rag%20Agent.png" alt="RAG Agent" width="300" />
+<img src="src/pics/Rag%20Agent.png" alt="RAG Agent" height="220" />
 
 ### Same Vehicle Agent
 
 The `same_vehicle_agent` verifies that all submitted images are consistent and belong to the same vehicle. This reduces mismatched evidence and helps prevent multi-vehicle claim contamination.
 
-<img src="src/pics/Same%20Vehicle%20Agent.png" alt="Same Vehicle Agent" width="300" />
+<img src="src/pics/Same%20Vehicle%20Agent.png" alt="Same Vehicle Agent" height="220" />
 
 ### Vehicle Type Agent
 
 The `vehicle_type_agent` identifies the vehicle class from the available data. This classification supports validation checks and ensures coverage rules are applied to the correct vehicle type.
 
-<img src="src/pics/Vehicle%20Type%20Agent.png" alt="Vehicle Type Agent" width="300" />
+<img src="src/pics/Vehicle%20Type%20Agent.png" alt="Vehicle Type Agent" height="220" />
 
 ### Pipeline Summary Agent
 
 The `image_pipeline_summary_agent` aggregates outputs from all agents and produces a final pipeline summary. This summary is the consolidated explanation of the automated decision and the supporting evidence.
 
-<img src="src/pics/Pipeline%20Summary%20Agent.png" alt="Pipeline Summary Agent" width="300" />
+<img src="src/pics/Pipeline%20Summary%20Agent.png" alt="Pipeline Summary Agent" height="220" />
 
 ## Folder Structure
 
