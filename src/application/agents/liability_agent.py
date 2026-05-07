@@ -44,15 +44,19 @@ class LiabilityAgent:
         return graph.compile()
 
     def _route_after_fetch(self, state: LiabilityAgentState) -> str:
-        if state.status == "failed" and state.retry_count < 3:
-            print(f"  [Liability] Retrying fetch_data (Attempt {state.retry_count}/3)...")
-            return "fetch_data"
+        if state.status == "failed":
+            if state.retry_count < 3:
+                print(f"  [Liability] Retrying fetch_data (Attempt {state.retry_count}/3)...")
+                return "fetch_data"
+            return "decide"
         return "analyze_liability"
 
     def _route_after_analyze(self, state: LiabilityAgentState) -> str:
-        if state.status == "failed" and state.retry_count < 3:
-            print(f"  [Liability] Retrying analyze_liability (Attempt {state.retry_count}/3)...")
-            return "analyze_liability"
+        if state.status == "failed":
+            if state.retry_count < 3:
+                print(f"  [Liability] Retrying analyze_liability (Attempt {state.retry_count}/3)...")
+                return "analyze_liability"
+            return "decide"
         return "decide"
 
 
@@ -259,24 +263,23 @@ class LiabilityAgent:
         """
         # Handle technical failure after max retries
         if state.status == "failed":
-            if state.retry_count >= 3:
-                print(f"  [Liability] Max retries exhausted! Sending claim {state.claim_id} to admin.")
+            print(f"  [Liability] Technical failure! Sending claim {state.claim_id} to admin.")
 
-                admin_message = (
-                    f"Liability Assessment agent failed after 3 retries for claim {state.claim_id}. "
-                    f"Error: {state.error}. "
-                    f"The image pipeline results exist, but liability could not be assessed. "
-                    f"Manual liability review is required."
-                )
+            admin_message = (
+                f"Liability Assessment agent failed for claim {state.claim_id}. "
+                f"Error: {state.error}. "
+                f"The image pipeline results exist, but liability could not be assessed. "
+                f"Manual liability review is required."
+            )
 
-                try:
-                    self._update_claim_status_tool.invoke({
-                        "status": "under_review",
-                        "ai_verdict": f"Liability Agent Failed: {state.error}",
-                    })
-                    self._log_agent_failure_tool.invoke(admin_message)
-                except Exception as e:
-                    print(f"  Failed to set under_review status: {str(e)}")
+            try:
+                self._update_claim_status_tool.invoke({
+                    "status": "under_review",
+                    "ai_verdict": f"Liability Agent Failed: {state.error}",
+                })
+                self._log_agent_failure_tool.invoke(admin_message)
+            except Exception as e:
+                print(f"  Failed to set under_review status: {str(e)}")
 
             return {"status": "failed"}
 
