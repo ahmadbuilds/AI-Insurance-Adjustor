@@ -15,6 +15,8 @@ interface RAGResultCardProps {
 export function RAGResultCard({ claimId, ragResult, status, onResolved }: RAGResultCardProps) {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isRejecting, setIsRejecting] = useState(false);
+  const [rejectionReason, setRejectionReason] = useState("");
 
   if (!ragResult) return null;
 
@@ -22,9 +24,13 @@ export function RAGResultCard({ claimId, ragResult, status, onResolved }: RAGRes
 
   const handleAction = async (action: "payment_approved" | "rejected") => {
     try {
+      if (action === "rejected" && !rejectionReason.trim()) {
+        setError("Please provide a reason for rejection.");
+        return;
+      }
       setSubmitting(true);
       setError(null);
-      await adminClaimsService.resolveRAGDecision(claimId, action);
+      await adminClaimsService.resolveRAGDecision(claimId, action, rejectionReason);
       onResolved();
     } catch (err: any) {
       setError(err.message || "Failed to submit decision.");
@@ -76,40 +82,75 @@ export function RAGResultCard({ claimId, ragResult, status, onResolved }: RAGRes
           </p>
         </div>
 
-        {ragResult.compensation_breakdown && ragResult.compensation_breakdown.length > 0 && (
-          <div>
-            <span className="block text-xs text-white/40 mb-2">Compensation Breakdown</span>
-            <div className="space-y-2">
-              {ragResult.compensation_breakdown.map((item: any, i: number) => (
-                <div key={i} className="flex justify-between items-center text-xs bg-black/20 p-2 rounded-lg border border-white/5">
-                  <span className="text-white/80">{item.part || item.description}</span>
-                  <span className="font-semibold text-emerald-400">${item.amount}</span>
-                </div>
-              ))}
+        {(() => {
+          const breakdown = typeof ragResult.compensation_breakdown === 'string'
+            ? (() => { try { return JSON.parse(ragResult.compensation_breakdown); } catch { return []; } })()
+            : ragResult.compensation_breakdown;
+          return breakdown && breakdown.length > 0 ? (
+            <div>
+              <span className="block text-xs text-white/40 mb-2">Compensation Breakdown</span>
+              <div className="space-y-2">
+                {breakdown.map((item: any, i: number) => (
+                  <div key={i} className="flex justify-between items-center text-xs bg-black/20 p-2 rounded-lg border border-white/5">
+                    <span className="text-white/80">{item.part || item.description}</span>
+                    <span className="font-semibold text-emerald-400">${item.amount}</span>
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
-        )}
+          ) : null;
+        })()}
 
         {isPendingDecision && (
           <div className="mt-6 pt-4 border-t border-white/10">
             {error && <p className="text-red-400 text-xs mb-3">{error}</p>}
-            <p className="text-sm font-medium text-white mb-3">Make Payment Decision</p>
-            <div className="flex gap-3">
-              <button
-                onClick={() => handleAction("payment_approved")}
-                disabled={submitting}
-                className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-black font-semibold py-2.5 rounded-xl transition-colors text-sm disabled:opacity-50"
-              >
-                {submitting ? "Processing..." : "Approve Payment"}
-              </button>
-              <button
-                onClick={() => handleAction("rejected")}
-                disabled={submitting}
-                className="flex-1 bg-white/5 hover:bg-white/10 text-white font-semibold py-2.5 rounded-xl border border-white/10 transition-colors text-sm disabled:opacity-50"
-              >
-                {submitting ? "Processing..." : "Reject Claim"}
-              </button>
-            </div>
+            <p className="text-sm font-medium text-white mb-3">Admin Action</p>
+            
+            {isRejecting ? (
+              <div className="space-y-3 animate-in fade-in slide-in-from-top-2 duration-200">
+                <textarea
+                  className="w-full bg-black/20 border border-white/10 rounded-xl p-3 text-sm text-white placeholder-white/30 focus:outline-none focus:ring-1 focus:ring-red-500/50"
+                  placeholder="Specify the reason for rejection (this will be emailed to the user)..."
+                  rows={3}
+                  value={rejectionReason}
+                  onChange={(e) => setRejectionReason(e.target.value)}
+                  disabled={submitting}
+                />
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => handleAction("rejected")}
+                    disabled={submitting}
+                    className="flex-1 bg-red-500 hover:bg-red-600 text-white font-semibold py-2.5 rounded-xl transition-colors text-sm disabled:opacity-50"
+                  >
+                    {submitting ? "Processing..." : "Confirm Reject"}
+                  </button>
+                  <button
+                    onClick={() => { setIsRejecting(false); setError(null); setRejectionReason(""); }}
+                    disabled={submitting}
+                    className="flex-1 bg-white/5 hover:bg-white/10 text-white font-semibold py-2.5 rounded-xl border border-white/10 transition-colors text-sm disabled:opacity-50"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex gap-3">
+                <button
+                  onClick={() => handleAction("payment_approved")}
+                  disabled={submitting}
+                  className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-black font-semibold py-2.5 rounded-xl transition-colors text-sm disabled:opacity-50"
+                >
+                  {submitting ? "Processing..." : "Approve"}
+                </button>
+                <button
+                  onClick={() => setIsRejecting(true)}
+                  disabled={submitting}
+                  className="flex-1 bg-white/5 hover:bg-white/10 text-white font-semibold py-2.5 rounded-xl border border-white/10 transition-colors text-sm disabled:opacity-50"
+                >
+                  Reject
+                </button>
+              </div>
+            )}
           </div>
         )}
 
