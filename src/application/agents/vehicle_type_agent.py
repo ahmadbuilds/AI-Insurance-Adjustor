@@ -29,6 +29,7 @@ class VehicleTypeAgent:
         self._fetch_vehicle_images_tool = fetch_vehicle_images_tool
         self._update_claim_status_tool = update_claim_status_tool
         self._log_agent_failure_tool = log_agent_failure_tool
+        self._model_name = model_name
         self._llm = create_model_instance(model_name=model_name, temperature=0, max_tokens=10)
         self._graph = self._build_graph()
 
@@ -48,15 +49,19 @@ class VehicleTypeAgent:
         return graph.compile()
 
     def _route_after_fetch(self, state: VehicleTypeAgentState) -> str:
-        if state.status == "failed" and state.error and "No vehicle images found" not in state.error and state.retry_count < 3:
-            print(f"  [VehicleType] Retrying fetch_vehicle_images (Attempt {state.retry_count}/3)...")
-            return "fetch_vehicle_images"
+        if state.status == "failed":
+            if state.error and "No vehicle images found" not in state.error and state.retry_count < 3:
+                print(f"  [VehicleType] Retrying fetch_vehicle_images (Attempt {state.retry_count}/3)...")
+                return "fetch_vehicle_images"
+            return "decide_claim"
         return "analyze_vehicle_types"
 
     def _route_after_analyze(self, state: VehicleTypeAgentState) -> str:
-        if state.status == "failed" and state.retry_count < 3:
-            print(f"  [VehicleType] Retrying analyze_vehicle_types (Attempt {state.retry_count}/3)...")
-            return "analyze_vehicle_types"
+        if state.status == "failed":
+            if state.retry_count < 3:
+                print(f"  [VehicleType] Retrying analyze_vehicle_types (Attempt {state.retry_count}/3)...")
+                return "analyze_vehicle_types"
+            return "decide_claim"
         return "decide_claim"
 
     #function to fetch only vehicle images for the claim
@@ -70,6 +75,8 @@ class VehicleTypeAgent:
         """
         try:
             raw_images = self._fetch_vehicle_images_tool.invoke({})
+
+            print(f"[VehicleType] Fetched {len(raw_images)} vehicle images for claim {state.claim_id}")
 
             if not raw_images:
                 return {
@@ -102,20 +109,21 @@ class VehicleTypeAgent:
             system_msg = SystemMessage(content=VEHICLE_TYPE_SYSTEM_PROMPT)
 
             for image in state.vehicle_images:
+                print(f"[VehicleType][LLM] model={self._model_name} image_id={image.id}")
                 human_msg = HumanMessage(content=[
                     {"type": "text", "text": "Classify the vehicle type in this image."},
                     {"type": "image_url", "image_url": {"url": image.public_url}}
                 ])
                 
                 response = self._llm.invoke([system_msg, human_msg])
-                vehicle_type = response.content.strip().upper()
+                raw_content = response.content.upper()
+                import re
                 
-                # Sanitize output to expected types
-                valid_types = ["PC", "MC", "CT", "EV", "CV", "SV", "OV"]
-                if vehicle_type not in valid_types:
-                    vehicle_type = "UNKNOWN"
+                # Use regex to find the first valid type code as a distinct word
+                match = re.search(r'\b(PC|MC|CT|EV|CV|SV|OV)\b', raw_content)
+                vehicle_type = match.group(1) if match else "UNKNOWN"
                     
-                print(f"  Image {image.id}: Classified completely as {vehicle_type}")
+                print(f"  Image {image.id}: Raw='{response.content.strip()}', Classified completely as {vehicle_type}")
 
                 results.append(
                     VehicleTypeClassification(image_id=image.id, vehicle_type=vehicle_type)
@@ -138,8 +146,17 @@ class VehicleTypeAgent:
             dict - containing identified_type, claim_rejected, and final status
         """
         if state.status == "failed":
-            if state.retry_count >= 3:
-                print(f"  [VehicleType] Max retries exhausted! Sending claim {state.claim_id} to admin.")
+            if state.error and "No vehicle images found" in state.error:
+                print(f"  [VehicleType] Rejecting claim {state.claim_id}: {state.error}")
+                try:
+                    self._update_claim_status_tool.invoke({
+                        "status": "rejected",
+                        "ai_verdict": f"Claim rejected: {state.error}",
+                    })
+                except Exception as e:
+                    print(f"  Failed to reject claim: {str(e)}")
+            else:
+                print(f"  [VehicleType] Technical failure! Sending claim {state.claim_id} to admin.")
                 try:
                     self._update_claim_status_tool.invoke({
                         "status": "under_review",
