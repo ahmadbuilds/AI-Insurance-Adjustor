@@ -5,7 +5,16 @@ try:
 except ModuleNotFoundError:
     from config import supabase_key,supabase_url,supabase_service_role_key
 
-client:Client=create_client(supabase_url,supabase_key)
+_client: Client = None
+_service_client: Client = None
+
+def get_client() -> Client:
+    global _client
+    if _client is None:
+        if not supabase_url or not supabase_key:
+            raise ValueError("Supabase URL or Key is missing")
+        _client = create_client(supabase_url, supabase_key)
+    return _client
 
 def get_user_from_token(token:str):
     """
@@ -17,6 +26,7 @@ def get_user_from_token(token:str):
         dict: User information if token is valid, None otherwise
     """
     try:
+        client = get_client()
         response=client.auth.get_user(token)
         return response.user
     except Exception as e:
@@ -31,4 +41,9 @@ def get_service_client()->Client:
     returns:
         Client: Supabase client authenticated with service role key
     """
-    return create_client(supabase_url,supabase_service_role_key)
+    global _service_client
+    if _service_client is None:
+        if not supabase_url or not supabase_service_role_key:
+            raise ValueError("Supabase URL or Service Role Key is missing")
+        _service_client = create_client(supabase_url, supabase_service_role_key)
+    return _service_client
