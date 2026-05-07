@@ -36,6 +36,7 @@ class DamageDetectionAgent:
         self._fetch_vehicle_images_tool = fetch_vehicle_images_tool
         self._update_claim_status_tool = update_claim_status_tool
         self._log_agent_failure_tool = log_agent_failure_tool
+        self._model_name = model_name
         self._llm = create_model_instance(model_name=model_name, temperature=0)
         self._graph = self._build_graph()
 
@@ -56,19 +57,23 @@ class DamageDetectionAgent:
         return graph.compile()
 
     def _route_after_fetch(self, state: DamageDetectionAgentState) -> str:
-        if state.status == "failed" and state.error and "No vehicle images found" not in state.error and state.retry_count < 3:
-            print(f"  [DamageDetection] Retrying fetch_vehicle_images (Attempt {state.retry_count}/3)...")
-            return "fetch_vehicle_images"
+        if state.status == "failed":
+            if state.error and "No vehicle images found" not in state.error and state.retry_count < 3:
+                print(f"  [DamageDetection] Retrying fetch_vehicle_images (Attempt {state.retry_count}/3)...")
+                return "fetch_vehicle_images"
+            return "decide_claim"
         return "analyze_damages"
 
     def _route_after_analyze(self, state: DamageDetectionAgentState) -> str:
-        if state.status == "failed" and state.retry_count < 3:
-            print(f"  [DamageDetection] Retrying analyze_damages (Attempt {state.retry_count}/3)...")
-            return "analyze_damages"
+        if state.status == "failed":
+            if state.retry_count < 3:
+                print(f"  [DamageDetection] Retrying analyze_damages (Attempt {state.retry_count}/3)...")
+                return "analyze_damages"
+            return "decide_claim"
         return "decide_claim"
 
 
-    #function to fetch only vehicle images (is_vehical=True) for the claim
+    #function to fetch only vehicle images for the claim
     def _fetch_vehicle_images_node(self, state: DamageDetectionAgentState) -> dict:
         """
         Fetch images that contain vehicles using the fetch_vehicle_images tool.
@@ -79,6 +84,8 @@ class DamageDetectionAgent:
         """
         try:
             raw_images = self._fetch_vehicle_images_tool.invoke({})
+
+            print(f"[DamageDetection] Fetched {len(raw_images)} vehicle images for claim {state.claim_id}")
 
             if not raw_images:
                 return {
@@ -118,6 +125,7 @@ class DamageDetectionAgent:
                     {"type": "image_url", "image_url": {"url": image.public_url}},
                 ])
 
+                print(f"[DamageDetection][LLM] model={self._model_name} image_id={image.id}")
                 response = self._llm.invoke([system_msg, human_msg])
                 response_text = response.content.strip()
 
@@ -188,8 +196,17 @@ class DamageDetectionAgent:
         """
         # Handle failure after max retries
         if state.status == "failed":
-            if state.retry_count >= 3:
-                print(f"  [DamageDetection] Max retries exhausted! Sending claim {state.claim_id} to admin.")
+            if state.error and "No vehicle images found" in state.error:
+                print(f"  [DamageDetection] Rejecting claim {state.claim_id}: {state.error}")
+                try:
+                    self._update_claim_status_tool.invoke({
+                        "status": "rejected",
+                        "ai_verdict": f"Claim rejected: {state.error}",
+                    })
+                except Exception as e:
+                    print(f"  Failed to reject claim: {str(e)}")
+            else:
+                print(f"  [DamageDetection] Technical failure! Sending claim {state.claim_id} to admin.")
 
                 # Building descriptive message for admin with partial results context
                 processed_count = len(state.damage_results)
@@ -203,7 +220,7 @@ class DamageDetectionAgent:
                     )
 
                 admin_message = (
-                    f"Damage Detection agent failed after 3 retries for claim {state.claim_id}. "
+                    f"Damage Detection agent failed for claim {state.claim_id}. "
                     f"Error: {state.error}.{partial_info} "
                     f"Manual damage assessment required. Please review the vehicle images and "
                     f"document all visible damage (parts affected, damage types, and severity levels)."
