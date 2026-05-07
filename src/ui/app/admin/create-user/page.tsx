@@ -231,6 +231,7 @@ export default function CreateUserPage() {
               <span className="flex-1">{success || serverError}</span>
               <button
                 onClick={() => { setSuccess(null); setServerError(null); }}
+                title="Dismiss"
                 className="text-white/40 hover:text-white transition-colors"
               >
                 <svg className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
