@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { LoadingShield } from "./LoadingShield";
 import AdminNotifications from "./AdminNotifications";
+import ClaimantNotifications from "./ClaimantNotifications";
 
 interface UserProfile {
   username: string;
@@ -219,7 +220,6 @@ export default function Navbar() {
   const router = useRouter();
 
   useEffect(() => {
-    // mounted=true check handles client-side only renders
     setTimeout(() => setMounted(true), 0);
   }, []);
 
@@ -328,6 +328,12 @@ export default function Navbar() {
                       Claims
                     </Link>
                     <Link
+                      href="/claims/track"
+                      className="rounded-lg px-3 py-2 text-sm text-white/50 hover:bg-white/5 hover:text-white transition-colors"
+                    >
+                      Track Claim
+                    </Link>
+                    <Link
                       href="/dispute-panel"
                       className="rounded-lg px-3 py-2 text-sm text-white/50 hover:bg-white/5 hover:text-white transition-colors"
                     >
@@ -355,6 +361,9 @@ export default function Navbar() {
             </div>
 
             <div className="flex items-center gap-4">
+              {user && user.role !== "admin" && (
+                <ClaimantNotifications />
+              )}
               {user && user.role === "admin" && <AdminNotifications />}
               {/* Avatar button */}
               <button
