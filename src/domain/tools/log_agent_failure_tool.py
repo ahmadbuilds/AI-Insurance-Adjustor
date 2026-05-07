@@ -1,6 +1,5 @@
 from langchain_core.tools import tool
 from domain.ports import ClaimRepositoryPort
-from infrastructure.socket.socket_server import emit_agent_failure
 import asyncio
 
 def make_log_agent_failure_tool(
@@ -36,13 +35,16 @@ def make_log_agent_failure_tool(
             return "Failed to save admin notification to database."
         
         try:
-            loop = asyncio.get_event_loop()
-            if loop.is_running():
-                loop.create_task(emit_agent_failure(claim_id, failed_task, message))
-            else:
-                asyncio.run(emit_agent_failure(claim_id, failed_task, message))
-        except RuntimeError:
-            asyncio.run(emit_agent_failure(claim_id, failed_task, message))
+            import os
+            import requests
+            api_url = os.getenv("BACKEND_API_URL", "http://127.0.0.1:8000")
+            requests.post(
+                f"{api_url}/api/internal/emit-agent-failure",
+                json={"claim_id": claim_id, "failed_task": failed_task, "message": message},
+                timeout=5
+            )
+        except Exception as e:
+            print(f"Failed to emit admin notification: {e}")
             
         return f"Agent failure logged successfully."
 

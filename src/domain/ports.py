@@ -163,6 +163,20 @@ class ClaimRepositoryPort(ABC):
         pass
 
     @abstractmethod
+    def save_claimant_notification(self, claim_id: str, user_id: str, notification_type: str, message: str) -> bool:
+        """
+        Save a claimant notification for a claim status update.
+        Args:
+            claim_id: UUID of the claim.
+            user_id: UUID of the claimant.
+            notification_type: Type of notification ('progress', 'approved', 'rejected').
+            message: Notification message to display.
+        Returns:
+            bool: True if successful.
+        """
+        pass
+
+    @abstractmethod
     def save_damage_detection_result(
         self,
         claim_id: str,
