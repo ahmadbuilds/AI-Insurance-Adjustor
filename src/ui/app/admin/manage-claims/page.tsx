@@ -12,7 +12,7 @@ import { ClaimStatusBadge } from "./components/ClaimStatusBadge";
 import type { AdminClaim, ClaimFilterState } from "./types/admin-claims.types";
 import Link from "next/link";
 
-// ── Inline claim card for this page only ─────────────────────────────────────
+
 function ClaimCard({ claim, index }: { claim: AdminClaim; index: number }) {
   const wordCount = claim.description.trim().split(/\s+/).length;
   const submittedAt = new Date(claim.created_at).toLocaleDateString("en-US", {
@@ -49,12 +49,11 @@ function ClaimCard({ claim, index }: { claim: AdminClaim; index: number }) {
 
           {/* Main content */}
           <div className="flex-1 min-w-0">
-            {/* Top row: title + status */}
             <div className="flex flex-wrap items-center gap-2.5 mb-1.5">
               <h3 className="text-sm font-semibold text-white group-hover:text-white/90 transition-colors truncate">
                 {claim.title}
               </h3>
-              <ClaimStatusBadge status={claim.status} pulse />
+              <ClaimStatusBadge status={claim.has_technical_failure ? "technical_failure" : claim.status} pulse />
             </div>
 
             {/* User info row */}
@@ -95,7 +94,6 @@ function ClaimCard({ claim, index }: { claim: AdminClaim; index: number }) {
   );
 }
 
-// ── Stat card ─────────────────────────────────────────────────────────────────
 function StatCard({
   label, value, color, bg, icon, onClick, active,
 }: {
@@ -130,7 +128,7 @@ function StatCard({
   );
 }
 
-// ── Page ──────────────────────────────────────────────────────────────────────
+
 export default function ManageClaimsPage() {
   const router = useRouter();
 
@@ -169,7 +167,13 @@ export default function ManageClaimsPage() {
   const filteredClaims = useMemo(() => {
     const q = filters.query.trim().toLowerCase();
     return claims.filter((c) => {
-      const matchesStatus = filters.status === "all" || c.status === filters.status;
+      const matchesStatus =
+        filters.status === "all"
+          ? true
+          : filters.status === "technical_failure"
+          ? c.has_technical_failure
+          : c.status === filters.status && !c.has_technical_failure;
+
       const matchesQuery =
         !q ||
         c.title.toLowerCase().includes(q) ||
@@ -193,11 +197,12 @@ export default function ManageClaimsPage() {
   }
 
   const counts = {
-    all:          claims.length,
-    approved:     claims.filter((c) => c.status === "approved").length,
-    under_review: claims.filter((c) => c.status === "under_review").length,
-    pending:      claims.filter((c) => c.status === "pending").length,
-    rejected:     claims.filter((c) => c.status === "rejected").length,
+    all:               claims.length,
+    technical_failure: claims.filter((c) => c.has_technical_failure).length,
+    approved:          claims.filter((c) => c.status === "approved" && !c.has_technical_failure).length,
+    under_review:      claims.filter((c) => c.status === "under_review" && !c.has_technical_failure).length,
+    pending:           claims.filter((c) => c.status === "pending" && !c.has_technical_failure).length,
+    rejected:          claims.filter((c) => c.status === "rejected" && !c.has_technical_failure).length,
   };
 
   const statCards = [
@@ -250,6 +255,18 @@ export default function ManageClaimsPage() {
         </svg>
       ),
     },
+    {
+      label: "Tech Failure",
+      value: counts.technical_failure,
+      status: "technical_failure" as const,
+      color: "text-amber-400",
+      bg: "bg-amber-500/10",
+      icon: (
+        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+        </svg>
+      ),
+    },
   ];
 
   return (
@@ -296,7 +313,7 @@ export default function ManageClaimsPage() {
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.45, delay: 0.08, ease: [0.16, 1, 0.3, 1] }}
-          className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8"
+          className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-8"
         >
           {statCards.map((s) => (
             <StatCard
