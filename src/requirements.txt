@@ -9,3 +9,7 @@ langchain-groq
 langchain
 langgraph
 python-socketio
+langchain-chroma
+langchain-huggingface
+langchain-text-splitters
+requests
