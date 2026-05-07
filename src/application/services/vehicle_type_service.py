@@ -99,6 +99,10 @@ def run_vehicle_type_service():
 
                     # Run the vehicle type detection graph
                     result = agent.invoke(claim_id=claim_id, user_id=user_id)
+                    if hasattr(result, "model_dump"):
+                        result = result.model_dump()
+                    elif hasattr(result, "dict"):
+                        result = result.dict()
 
                     # Save full result to the vehicle_type_results DB table
                     adapter.save_vehicle_type_result(
@@ -106,7 +110,7 @@ def run_vehicle_type_service():
                         user_id=user_id,
                         identified_type=result.get("identified_type"),
                         claim_rejected=result.get("claim_rejected", False),
-                        status=result["status"],
+                        status=result.get("status", "failed"),
                         error=result.get("error"),
                     )
                     print(f"Vehicle type result saved to database")

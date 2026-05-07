@@ -105,6 +105,10 @@ def run_damage_detection_service():
 
                     # Run the damage detection graph
                     result = agent.invoke(claim_id=claim_id, user_id=user_id)
+                    if hasattr(result, "model_dump"):
+                        result = result.model_dump()
+                    elif hasattr(result, "dict"):
+                        result = result.dict()
 
                     # Serialize damage_results to dicts for DB storage
                     damage_results = result.get("damage_results", [])
@@ -126,7 +130,7 @@ def run_damage_detection_service():
                         claim_rejected=result.get("claim_rejected", False),
                         damage_details=damage_details_serialized,
                         damage_summary=result.get("damage_summary"),
-                        status=result["status"],
+                        status=result.get("status", "failed"),
                         error=result.get("error"),
                     )
                     print(f"Damage detection result saved to database")

@@ -1,4 +1,6 @@
 import json
+import os
+import requests
 from infrastructure.redis.redis_config import get_redis_client
 from infrastructure.redis.redis_client import publish_to_stream
 from infrastructure.supabase.supabase_client import get_service_client
@@ -7,6 +9,19 @@ from domain.tools.fetch_liability_data_tool import make_fetch_liability_data_too
 from domain.tools.update_claim_status_tool import make_update_claim_status_tool
 from domain.tools.log_agent_failure_tool import make_log_agent_failure_tool
 from application.agents.liability_agent import LiabilityAgent
+
+
+def _emit_admin_notification(claim_id: str, failed_task: str, message: str):
+    """Emit admin notification via internal HTTP endpoint (thread-safe)."""
+    try:
+        api_url = os.getenv("BACKEND_API_URL", "http://127.0.0.1:8000")
+        requests.post(
+            f"{api_url}/api/internal/emit-agent-failure",
+            json={"claim_id": claim_id, "failed_task": failed_task, "message": message},
+            timeout=5
+        )
+    except Exception as e:
+        print(f"Failed to emit admin notification: {e}")
 
 
 # Redis stream names
@@ -103,6 +118,10 @@ def run_liability_service():
 
                     # Run the liability assessment graph
                     result = agent.invoke(claim_id=claim_id, user_id=user_id)
+                    if hasattr(result, "model_dump"):
+                        result = result.model_dump()
+                    elif hasattr(result, "dict"):
+                        result = result.dict()
 
                     # Extract assessment for DB storage
                     assessment = result.get("assessment")
@@ -146,6 +165,18 @@ def run_liability_service():
                             error=error,
                         )
                         print(f"Liability result saved to database")
+                        
+                        if needs_admin_review:
+                            adapter.save_admin_notification(
+                                claim_id=claim_id,
+                                message="Manual review required: AI flagged this claim based on suspicious or low-confidence Liability conditions.",
+                                failed_task="liability_assessment"
+                            )
+                            _emit_admin_notification(
+                                claim_id=claim_id,
+                                failed_task="liability_assessment",
+                                message="Manual review required: AI flagged this claim based on suspicious or low-confidence Liability conditions."
+                            )
                     else:
                         # Save a failed result row
                         adapter.save_liability_result(
@@ -167,13 +198,25 @@ def run_liability_service():
                             error=error,
                         )
                         print(f"Failed liability result saved to database")
+                        
+                        # Already explicitly true for failures
+                        adapter.save_admin_notification(
+                            claim_id=claim_id,
+                            message=f"Manual review required: Liability assessment fundamentally failed. Error: {error}",
+                            failed_task="liability_assessment"
+                        )
+                        _emit_admin_notification(
+                            claim_id=claim_id,
+                            failed_task="liability_assessment",
+                            message=f"Manual review required: Liability assessment fundamentally failed. Error: {error}"
+                        )
 
                     # Publish completion signal to RESULT_STREAM
                     publish_to_stream(RESULT_STREAM, {
                         "claim_id": claim_id,
                         "User_id": user_id,
                         "source_task": "liability_assessment",
-                        "claim_rejected": str(needs_admin_review),
+                        "claim_rejected": "False",
                         "needs_admin_review": str(needs_admin_review),
                     })
                     print(f"Completion signal published to {RESULT_STREAM}")

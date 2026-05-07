@@ -112,10 +112,18 @@ def run_classification_service():
 
                     # Run the classification graph
                     result = agent.invoke(claim_id=claim_id, user_id=user_id)
+                    if hasattr(result, "model_dump"):
+                        result = result.model_dump()
+                    elif hasattr(result, "dict"):
+                        result = result.dict()
 
                     # Save full result to the classification_results DB table
                     classification_results = result.get("classification_results", [])
-                    vehicles_detected = sum(1 for r in classification_results if r.is_vehical)
+                    vehicles_detected = sum(
+                        1
+                        for r in classification_results
+                        if (r.get("is_vehical", False) if isinstance(r, dict) else getattr(r, "is_vehical", False))
+                    )
 
                     adapter.save_classification_result(
                         claim_id=claim_id,
@@ -123,7 +131,7 @@ def run_classification_service():
                         images_processed=len(classification_results),
                         vehicles_detected=vehicles_detected,
                         claim_rejected=result.get("claim_rejected", False),
-                        status=result["status"],
+                        status=result.get("status", "failed"),
                         error=result.get("error"),
                     )
                     print(f"Classification result saved to database")

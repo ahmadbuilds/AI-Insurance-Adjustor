@@ -103,6 +103,10 @@ def run_image_pipeline_summary_service():
 
                     # Run the pipeline summary graph
                     result = agent.invoke(claim_id=claim_id, user_id=user_id)
+                    if hasattr(result, "model_dump"):
+                        result = result.model_dump()
+                    elif hasattr(result, "dict"):
+                        result = result.dict()
 
                     # Extract the pipeline summary for DB storage
                     pipeline_summary = result.get("pipeline_summary")

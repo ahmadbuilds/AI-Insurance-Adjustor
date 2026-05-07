@@ -103,6 +103,10 @@ def run_same_vehicle_service():
 
                     # Run the same vehicle detection graph
                     result = agent.invoke(claim_id=claim_id, user_id=user_id)
+                    if hasattr(result, "model_dump"):
+                        result = result.model_dump()
+                    elif hasattr(result, "dict"):
+                        result = result.dict()
 
                     # Save full result to the same_vehicle_results DB table
                     adapter.save_same_vehicle_result(
@@ -111,7 +115,7 @@ def run_same_vehicle_service():
                         vehicle_images_count=len(result.get("vehicle_images", [])),
                         is_same_vehicle=result.get("is_same_vehicle", False),
                         claim_rejected=result.get("claim_rejected", False),
-                        status=result["status"],
+                        status=result.get("status", "failed"),
                         error=result.get("error"),
                     )
                     print(f"Same vehicle result saved to database")
