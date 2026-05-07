@@ -38,6 +38,9 @@ export default function ClaimsPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError]           = useState<string | null>(null);
   const [success, setSuccess]       = useState<string | null>(null);
+  
+  const [showQualityWarning, setShowQualityWarning] = useState(false);
+  const [hasAcceptedWarning, setHasAcceptedWarning] = useState(false);
 
   // Auto-dismiss toasts
   useEffect(() => {
@@ -120,6 +123,7 @@ export default function ClaimsPage() {
       await claimsService.submitClaim(title, description, images);
 
       setSuccess("Claim submitted successfully! Your claim is now pending AI evaluation.");
+      router.push("/claims/track");
       setTitle("");
       setDescription("");
       setImages([]);
@@ -198,7 +202,7 @@ export default function ClaimsPage() {
           </div>
         )}
 
-        {/* Card shell (matches mockup window chrome) */}
+        {/* Card shell */}
         <div className="rounded-2xl border border-white/10 bg-linear-to-br from-white/5 to-white/2 overflow-hidden shadow-2xl shadow-black/40">
 
           <div className="p-6 space-y-6">
@@ -294,7 +298,14 @@ export default function ClaimsPage() {
                 onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
                 onDragLeave={() => setDragOver(false)}
                 onDrop={handleDrop}
-                onClick={() => fileInputRef.current?.click()}
+                onClick={(e) => {
+                  if (e.target === fileInputRef.current) return;
+                  if (!hasAcceptedWarning) {
+                    setShowQualityWarning(true);
+                  } else {
+                    fileInputRef.current?.click();
+                  }
+                }}
                 className={`relative cursor-pointer rounded-xl border-2 border-dashed p-6 text-center transition-all ${
                   dragOver
                     ? "border-[#3B82F6]/60 bg-[#3B82F6]/5"
@@ -379,6 +390,43 @@ export default function ClaimsPage() {
           </div>
         </div>
       </main>
+
+      {/* Image Quality Warning Modal */}
+      {showQualityWarning && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-[#0f172a] border border-yellow-500/30 rounded-2xl p-6 max-w-md w-full shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center gap-3 mb-4 text-yellow-500">
+              <svg className="w-6 h-6 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+              <h2 className="text-xl font-semibold">Image Quality Notice</h2>
+            </div>
+            <p className="text-white/80 text-sm leading-relaxed mb-6">
+              To ensure our AI models can accurately evaluate your claim, please submit <strong>high-quality, clear, and well-lit images.</strong>
+              <br/><br/>
+              <span className="text-white/50 italic text-xs">Note: Images that are excessively blurry, too dark, or of very poor quality may be ignored by the evaluation agents, delaying your claim.</span>
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button 
+                onClick={() => setShowQualityWarning(false)}
+                className="px-4 py-2 rounded-xl text-sm font-medium text-white/70 hover:text-white hover:bg-white/5 transition-colors"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={() => {
+                  setHasAcceptedWarning(true);
+                  setShowQualityWarning(false);
+                  fileInputRef.current?.click();
+                }}
+                className="px-4 py-2.5 rounded-xl text-sm font-semibold bg-yellow-500 hover:bg-yellow-600 text-black transition-colors"
+              >
+                I Understand
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-32 bg-linear-to-t from-[#030712] to-transparent" />
     </div>
