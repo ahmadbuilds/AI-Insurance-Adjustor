@@ -1,19 +1,40 @@
-import nodemailer from "nodemailer";
+export async function sendEmailJS(toEmail: string, subject: string, htmlMessage: string) {
+  const serviceId = process.env.EMAILJS_SERVICE_ID;
+  const templateId = process.env.EMAILJS_TEMPLATE_ID;
+  const publicKey = process.env.EMAILJS_PUBLIC_KEY;
+  const privateKey = process.env.EMAILJS_PRIVATE_KEY;
 
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST,
-  port: Number(process.env.SMTP_PORT) || 587,
-  secure: process.env.SMTP_SECURE === "true",
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-  },
-});
+  if (!serviceId || !templateId || !publicKey || !privateKey) {
+    console.warn("EmailJS credentials not configured. Skipping email send.");
+    return;
+  }
 
-const FROM_ADDRESS =
-  process.env.SMTP_FROM || "AI Insurance Adjuster <no-reply@ai-insurance.com>";
+  const payload = {
+    service_id: serviceId,
+    template_id: templateId,
+    user_id: publicKey,
+    accessToken: privateKey,
+    template_params: {
+      to_email: toEmail,
+      subject: subject,
+      html_message: htmlMessage,
+    },
+  };
 
-// ── Account Confirmation Email ────────────────────────────────────────────────
+  const res = await fetch("https://api.emailjs.com/api/v1.0/email/send", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    console.error("EmailJS Error:", text);
+    throw new Error(`EmailJS failed to send email: ${text}`);
+  }
+}
+
+// count Confirmation Email 
 export async function sendConfirmationEmail({
   to,
   username,
@@ -112,15 +133,14 @@ export async function sendConfirmationEmail({
 </body>
 </html>`;
 
-  await transporter.sendMail({
-    from: FROM_ADDRESS,
+  await sendEmailJS(
     to,
-    subject: "AI Insurance Adjuster — Confirm Your Account",
-    html,
-  });
+    "AI Insurance Adjuster — Confirm Your Account",
+    html
+  );
 }
 
-// ── Dispute Decision Email ────────────────────────────────────────────────────
+// Dispute Decision Email 
 export async function sendDisputeDecisionEmail({
   to,
   username,
@@ -136,7 +156,6 @@ export async function sendDisputeDecisionEmail({
 }) {
   const isApproved = status === "approved";
 
-  // Colour palette — green for approved, red for rejected
   const accentColor = isApproved ? "#10b981" : "#ef4444";
   const accentDark  = isApproved ? "#065f46" : "#7f1d1d";
   const accentLight = isApproved ? "#f0fdf4" : "#fff1f2";
@@ -361,10 +380,277 @@ export async function sendDisputeDecisionEmail({
 </body>
 </html>`;
 
-  await transporter.sendMail({
-    from: FROM_ADDRESS,
+  await sendEmailJS(
     to,
-    subject: `Immaculate Aegis — Dispute ${statusLabel}: "${claimTitle}"`,
-    html,
-  });
+    `Immaculate Aegis — Dispute ${statusLabel}: "${claimTitle}"`,
+    html
+  );
+}
+
+// Claim Submission Email 
+export async function sendClaimSubmissionEmail({
+  to,
+  username,
+  claimTitle,
+}: {
+  to: string;
+  username: string;
+  claimTitle: string;
+}) {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
+
+  const html = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Claim Submitted — Immaculate Aegis</title>
+</head>
+<body style="margin:0;padding:0;background-color:#f1f5f9;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;">
+
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f1f5f9;padding:40px 20px;">
+    <tr>
+      <td align="center">
+        <table width="620" cellpadding="0" cellspacing="0"
+          style="background-color:#ffffff;border-radius:20px;overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,0.08),0 2px 6px rgba(0,0,0,0.04);">
+
+          <!-- ── Brand Header ── -->
+          <tr>
+            <td style="background:linear-gradient(135deg,#4f46e5 0%,#7c3aed 100%);padding:32px 44px;text-align:center;">
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td align="center">
+                    <p style="margin:0;color:#ffffff;font-size:26px;font-weight:800;letter-spacing:-0.5px;line-height:1.2;">
+                      🛡️ Immaculate Aegis
+                    </p>
+                    <p style="margin:6px 0 0;color:#c7d2fe;font-size:13px;letter-spacing:0.3px;">
+                      AI Insurance Adjuster
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- ── Status Banner ── -->
+          <tr>
+            <td style="background-color:#3b82f6;padding:14px 44px;text-align:center;">
+              <p style="margin:0;color:#ffffff;font-size:17px;font-weight:700;letter-spacing:-0.2px;">
+                📄 &nbsp; Claim Submitted Successfully
+              </p>
+            </td>
+          </tr>
+
+          <!-- ── Main Body ── -->
+          <tr>
+            <td style="padding:40px 44px;">
+
+              <!-- Greeting -->
+              <h2 style="margin:0 0 6px;color:#0f172a;font-size:22px;font-weight:700;">
+                Dear ${username},
+              </h2>
+              <p style="margin:0 0 6px;color:#64748b;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.6px;">
+                We have received your claim
+              </p>
+
+              <div style="height:1px;background-color:#e2e8f0;margin:20px 0;"></div>
+
+              <!-- Message -->
+              <p style="margin:0 0 22px;color:#374151;font-size:15px;line-height:1.75;">
+                Thank you for submitting your insurance claim with Immaculate Aegis. Our AI Adjuster system has received your claim <strong>"${claimTitle}"</strong> and has begun processing the information and images you provided.
+              </p>
+
+              <!-- Next Steps -->
+              <table width="100%" cellpadding="0" cellspacing="0"
+                style="background-color:#eff6ff;border:1px solid #bfdbfe;border-left:4px solid #3b82f6;border-radius:8px;margin-bottom:8px;">
+                <tr>
+                  <td style="padding:16px 20px;">
+                    <p style="margin:0 0 4px;color:#1e40af;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;">
+                      What happens next?
+                    </p>
+                    <p style="margin:0;color:#1e3a8a;font-size:14px;line-height:1.6;">
+                      Our AI will analyze your submission in the background. You will receive another email as soon as a decision is made or if your claim requires manual review by a human adjuster.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- CTA Button -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin-top:28px;">
+                <tr>
+                  <td align="center">
+                    <a href="${appUrl}/claims"
+                      style="display:inline-block;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#ffffff;text-decoration:none;padding:14px 36px;border-radius:10px;font-size:15px;font-weight:600;letter-spacing:0.2px;">
+                      Track My Claim Status
+                    </a>
+                  </td>
+                </tr>
+              </table>
+
+            </td>
+          </tr>
+
+          <!-- ── Legal Footer ── -->
+          <tr>
+            <td style="background-color:#f1f5f9;padding:18px 44px;border-top:1px solid #e2e8f0;text-align:center;">
+              <p style="margin:0 0 4px;color:#94a3b8;font-size:11px;">
+                © 2024 Immaculate Aegis &nbsp;·&nbsp; AI Insurance Adjuster &nbsp;·&nbsp; All rights reserved.
+              </p>
+              <p style="margin:0;color:#94a3b8;font-size:11px;">
+                This is an automated notification. Please do not reply directly to this email.
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+
+</body>
+</html>`;
+
+  await sendEmailJS(
+    to,
+    `Immaculate Aegis — Claim Submitted: "${claimTitle}"`,
+    html
+  );
+}
+
+// Compensation Invoice Email 
+export async function sendCompensationInvoiceEmail({
+  to,
+  username,
+  claimTitle,
+  compensationAmount,
+  breakdown,
+}: {
+  to: string;
+  username: string;
+  claimTitle: string;
+  compensationAmount: number;
+  breakdown: Array<{ part: string; amount: number }>;
+}) {
+  const breakdownRows = breakdown.map(item => `
+    <tr>
+      <td style="padding:10px 0;border-bottom:1px solid #e2e8f0;color:#374151;font-size:14px;text-transform:capitalize;">
+        ${item.part}
+      </td>
+      <td align="right" style="padding:10px 0;border-bottom:1px solid #e2e8f0;color:#10b981;font-size:14px;font-weight:600;">
+        $${item.amount.toLocaleString()}
+      </td>
+    </tr>
+  `).join('');
+
+  const html = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Compensation Invoice — Immaculate Aegis</title>
+</head>
+<body style="margin:0;padding:0;background-color:#f1f5f9;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f1f5f9;padding:40px 20px;">
+    <tr>
+      <td align="center">
+        <table width="620" cellpadding="0" cellspacing="0" style="background-color:#ffffff;border-radius:20px;overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,0.08);">
+          <!-- Header -->
+          <tr>
+            <td style="background:linear-gradient(135deg,#4f46e5 0%,#7c3aed 100%);padding:32px 44px;text-align:center;">
+              <p style="margin:0;color:#ffffff;font-size:26px;font-weight:800;letter-spacing:-0.5px;line-height:1.2;">
+                🛡️ Immaculate Aegis
+              </p>
+              <p style="margin:6px 0 0;color:#c7d2fe;font-size:13px;letter-spacing:0.3px;">
+                AI Insurance Adjuster &nbsp;·&nbsp; Compensation Approved
+              </p>
+            </td>
+          </tr>
+
+          <!-- Banner -->
+          <tr>
+            <td style="background-color:#10b981;padding:14px 44px;text-align:center;">
+              <p style="margin:0;color:#ffffff;font-size:17px;font-weight:700;letter-spacing:-0.2px;">
+                ✅ &nbsp; Claim Finalized & Invoice Ready
+              </p>
+            </td>
+          </tr>
+
+          <!-- Main Body -->
+          <tr>
+            <td style="padding:40px 44px;">
+              <h2 style="margin:0 0 6px;color:#0f172a;font-size:22px;font-weight:700;">
+                Dear ${username},
+              </h2>
+              <p style="margin:0 0 6px;color:#64748b;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.6px;">
+                Your claim compensation has been approved
+              </p>
+              <div style="height:1px;background-color:#e2e8f0;margin:20px 0;"></div>
+              <p style="margin:0 0 22px;color:#374151;font-size:15px;line-height:1.75;">
+                We are pleased to inform you that your insurance claim <strong>"${claimTitle}"</strong> has been formally approved. 
+                Below is the detailed breakdown of the compensation our company will be covering based on the AI assessment and policy analysis.
+              </p>
+
+              <!-- Invoice Breakdown -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;margin-bottom:24px;overflow:hidden;">
+                <tr>
+                  <td style="padding:20px 24px;">
+                    <p style="margin:0 0 16px;color:#0f172a;font-size:15px;font-weight:700;text-transform:uppercase;letter-spacing:0.4px;">
+                      Compensation Breakdown
+                    </p>
+                    <table width="100%" cellpadding="0" cellspacing="0">
+                      ${breakdownRows}
+                    </table>
+                    <table width="100%" cellpadding="0" cellspacing="0" style="margin-top:16px;">
+                      <tr>
+                        <td style="padding:10px 0;color:#0f172a;font-size:16px;font-weight:700;">
+                          Total Approved Amount:
+                        </td>
+                        <td align="right" style="padding:10px 0;color:#059669;font-size:20px;font-weight:800;">
+                          $${compensationAmount.toLocaleString()}
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Action Required -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#eff6ff;border:1px solid #bfdbfe;border-left:4px solid #3b82f6;border-radius:8px;margin-bottom:8px;">
+                <tr>
+                  <td style="padding:16px 20px;">
+                    <p style="margin:0 0 4px;color:#1e40af;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;">
+                      Action Required to Receive Funds
+                    </p>
+                    <p style="margin:0;color:#1e3a8a;font-size:14px;line-height:1.6;">
+                      To disburse your compensation, please <strong>reply to this email</strong> with your bank account number and routing details. 
+                      Alternatively, you may visit our office physically to receive a cheque.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Legal Footer -->
+          <tr>
+            <td style="background-color:#f1f5f9;padding:18px 44px;border-top:1px solid #e2e8f0;text-align:center;">
+              <p style="margin:0 0 4px;color:#94a3b8;font-size:11px;">
+                © 2024 Immaculate Aegis &nbsp;·&nbsp; AI Insurance Adjuster &nbsp;·&nbsp; All rights reserved.
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+
+  await sendEmailJS(
+    to,
+    `Immaculate Aegis — Compensation Approved: "${claimTitle}"`,
+    html
+  );
 }
