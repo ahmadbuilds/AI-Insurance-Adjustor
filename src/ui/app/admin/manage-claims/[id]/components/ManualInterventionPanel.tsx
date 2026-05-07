@@ -1,12 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { AlertTriangle, CheckCircle, Car, Eye, Tag, Loader2 } from "lucide-react";
+import { AlertTriangle, CheckCircle, Car, Eye, Tag, Loader2, ShieldAlert, FileText, ChevronRight, ChevronLeft } from "lucide-react";
+import { motion } from "framer-motion";
 import { adminClaimsService } from "../../services/admin-claims.service";
 import { createClient } from "@/lib/supabase/client";
 import type { AdminNotification, ClaimImage } from "../../types/admin-claims.types";
 
-// ─── Shared Types ────────────────────────────────────────
 interface ManualInterventionPanelProps {
   notification: AdminNotification;
   claimId: string;
@@ -24,8 +24,27 @@ const VEHICLE_TYPES = [
   { code: "OV", label: "Other Vehicle", desc: "Boats, ATVs, golf carts, other" },
 ] as const;
 
-// ─── Classification Form ─────────────────────────────────
-// Admin marks each image as containing a vehicle or not
+const VEHICLE_PARTS = [
+  "No Damage",
+  "Front Bumper",
+  "Rear Bumper",
+  "Hood",
+  "Trunk",
+  "Left Fender",
+  "Right Fender",
+  "Left Quarter Panel",
+  "Right Quarter Panel",
+  "Left Front Door",
+  "Right Front Door",
+  "Left Rear Door",
+  "Right Rear Door",
+  "Windshield",
+  "Rear Window",
+  "Roof",
+  "Wheels/Tires",
+  "Other"
+];
+
 function ClassificationForm({
   images,
   claimId,
@@ -54,7 +73,7 @@ function ClassificationForm({
     try {
       const supabase = createClient();
 
-      // Update each image's is_vehical column
+     
       for (const [imageId, isVehicle] of Object.entries(results)) {
         await supabase
           .from("claim_images")
@@ -62,7 +81,6 @@ function ClassificationForm({
           .eq("id", imageId);
       }
 
-      // Check if ALL images are non-vehicle → reject, else pass
       const allFalse = Object.values(results).every((v) => !v);
       if (allFalse) {
         await supabase
@@ -74,7 +92,7 @@ function ClassificationForm({
           })
           .eq("id", claimId);
       } else {
-        // Update claim status back to pending so the workflow picks it up
+       
         await supabase
           .from("claims")
           .update({
@@ -85,7 +103,6 @@ function ClassificationForm({
           .eq("id", claimId);
       }
 
-      // Resolve notification and resume
       await adminClaimsService.resolveNotificationAndResume(
         notificationId,
         claimId,
@@ -156,8 +173,7 @@ function ClassificationForm({
   );
 }
 
-// ─── Same Vehicle Form ────────────────────────────────────
-// Admin confirms whether all images show the same vehicle
+
 function SameVehicleForm({
   images,
   claimId,
@@ -282,8 +298,6 @@ function SameVehicleForm({
   );
 }
 
-// ─── Vehicle Type Form ────────────────────────────────────
-// Admin selects the vehicle type from a dropdown
 function VehicleTypeForm({
   images,
   claimId,
@@ -396,7 +410,397 @@ function VehicleTypeForm({
   );
 }
 
-// ─── Main Panel ──────────────────────────────────────────
+
+function DamageDetectionForm({
+  images,
+  claimId,
+  notificationId,
+  onResolved,
+}: {
+  images: ClaimImage[];
+  claimId: string;
+  notificationId: string;
+  onResolved: () => void;
+}) {
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [damageData, setDamageData] = useState<Record<string, { part: string; description: string }>>({});
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const currentImage = images[currentIndex];
+  const isLastImage = currentIndex === images.length - 1;
+
+  const handleNext = () => {
+    if (currentIndex < images.length - 1) setCurrentIndex(currentIndex + 1);
+  };
+
+  const handlePrev = () => {
+    if (currentIndex > 0) setCurrentIndex(currentIndex - 1);
+  };
+
+  const handleSubmit = async () => {
+    setSubmitting(true);
+    setError(null);
+    try {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+
+      // Format damage details
+      const damageDetails = Object.entries(damageData)
+        .filter(([_, data]) => data.part && data.part !== "No Damage")
+        .map(([imgId, data]) => ({
+          image_id: imgId,
+          part: data.part,
+          damage_type: "Manual",
+          severity: "Unknown",
+          description: data.description,
+        }));
+
+      const hasDamage = damageDetails.length > 0;
+
+      // Save damage_detection_results manually
+      await supabase.from("damage_detection_results").insert({
+        claim_id: claimId,
+        user_id: user?.id,
+        images_analyzed: images.length,
+        images_with_damage: damageDetails.length,
+        claim_rejected: !hasDamage,
+        damage_details: damageDetails,
+        damage_summary: hasDamage ? "Damage manually recorded by admin." : "No damage recorded.",
+        status: "completed",
+      });
+
+      await supabase
+        .from("claims")
+        .update({
+          status: hasDamage ? "pending" : "rejected",
+          ai_verdict: hasDamage 
+            ? "Damage details manually classified by admin." 
+            : "Rejected by admin: No damage detected.",
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", claimId);
+
+      await adminClaimsService.resolveNotificationAndResume(
+        notificationId,
+        claimId,
+        "damage_detection"
+      );
+
+      onResolved();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  if (!currentImage) return null;
+  const currentData = damageData[currentImage.id] || { part: "", description: "" };
+
+  return (
+    <div className="space-y-5">
+      <p className="text-sm text-white/60">
+        The AI damage detection agent failed. Review the images one by one and record the damaged parts.
+      </p>
+
+      <div className="flex flex-col md:flex-row gap-5">
+        {/* Left: Image Carousel */}
+        <div className="flex-1 space-y-3">
+          <div className="aspect-video w-full rounded-xl overflow-hidden border border-white/10 bg-black/40 relative">
+            <img 
+              src={adminClaimsService.getImagePublicUrl(currentImage.storage_path)} 
+              alt={currentImage.file_name} 
+              className="h-full w-full object-contain" 
+            />
+            <div className="absolute top-3 right-3 bg-black/60 backdrop-blur-sm px-2.5 py-1 rounded text-xs font-medium text-white border border-white/10">
+              Image {currentIndex + 1} of {images.length}
+            </div>
+          </div>
+          
+          <div className="flex items-center justify-between">
+            <button 
+              onClick={handlePrev} 
+              disabled={currentIndex === 0}
+              className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-white/70 text-xs font-medium disabled:opacity-30 flex items-center gap-1"
+            >
+              <ChevronLeft className="h-3 w-3" /> Prev
+            </button>
+            <div className="flex gap-1.5">
+              {images.map((img, idx) => (
+                <div key={img.id} className={`h-1.5 rounded-full transition-all ${idx === currentIndex ? "w-4 bg-emerald-400" : "w-1.5 bg-white/20"}`} />
+              ))}
+            </div>
+            <button 
+              onClick={handleNext} 
+              disabled={isLastImage}
+              className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-white/70 text-xs font-medium disabled:opacity-30 flex items-center gap-1"
+            >
+              Next <ChevronRight className="h-3 w-3" />
+            </button>
+          </div>
+        </div>
+
+        {/* Right: Input Form */}
+        <div className="w-full md:w-72 space-y-4">
+          <div>
+            <label className="block text-xs font-medium text-white/60 mb-1.5">Vehicle Part</label>
+            <select
+              value={currentData.part}
+              title="Select the damaged part of the vehicle shown in this image. If there is no visible damage, select 'No Damage'."
+              onChange={(e) => setDamageData(prev => ({ ...prev, [currentImage.id]: { ...currentData, part: e.target.value } }))}
+              className="w-full bg-white/[0.03] border border-white/10 rounded-lg p-2.5 text-sm text-white focus:outline-none focus:border-emerald-500/50"
+            >
+              <option value="" disabled>Select a part...</option>
+              {VEHICLE_PARTS.map(part => (
+                <option key={part} value={part} className="bg-gray-900">{part}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-white/60 mb-1.5">Description</label>
+            <textarea
+              value={currentData.description}
+              onChange={(e) => setDamageData(prev => ({ ...prev, [currentImage.id]: { ...currentData, description: e.target.value } }))}
+              placeholder="e.g. Large dent and paint scratch..."
+              className="w-full h-28 bg-white/[0.03] border border-white/10 rounded-lg p-2.5 text-sm text-white placeholder-white/20 focus:outline-none focus:border-emerald-500/50 resize-none"
+              disabled={currentData.part === "No Damage"}
+            />
+          </div>
+        </div>
+      </div>
+
+      {error && <p className="text-sm text-red-400">{error}</p>}
+
+      <button
+        onClick={handleSubmit}
+        disabled={submitting}
+        className="w-full flex items-center justify-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 px-4 py-3 text-sm font-semibold text-white transition-colors"
+      >
+        {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
+        {submitting ? "Saving..." : "Submit All Damages & Resume Workflow"}
+      </button>
+    </div>
+  );
+}
+
+
+function RAGAgentForm({
+  claimId,
+  notificationId,
+  onResolved,
+}: {
+  claimId: string;
+  notificationId: string;
+  onResolved: () => void;
+}) {
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  
+  const [liabilityResult, setLiabilityResult] = useState<any>(null);
+  const [coverages, setCoverages] = useState<string[]>([]);
+  const [loadingContext, setLoadingContext] = useState(true);
+
+  const [selectedPolicy, setSelectedPolicy] = useState("");
+  const [amount, setAmount] = useState("");
+  const [isRejecting, setIsRejecting] = useState(false);
+  const [rejectionReason, setRejectionReason] = useState("");
+
+  useEffect(() => {
+    async function loadData() {
+      try {
+        const supabase = createClient();
+        // Fetch liability result
+        const { data: liab } = await supabase
+          .from("liability_results")
+          .select("*")
+          .eq("claim_id", claimId)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        setLiabilityResult(liab);
+
+        // Fetch dynamic coverages from backend
+        const FASTAPI_URL = process.env.NEXT_PUBLIC_FASTAPI_URL || "http://127.0.0.1:8000";
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          const res = await fetch(`${FASTAPI_URL}/policy/coverages`, {
+            headers: { Authorization: `Bearer ${session.access_token}` }
+          });
+          if (res.ok) {
+            const data = await res.json();
+            if (data.coverages) setCoverages(data.coverages);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load RAG context", err);
+      } finally {
+        setLoadingContext(false);
+      }
+    }
+    loadData();
+  }, [claimId]);
+
+  const handleSubmit = async () => {
+    setSubmitting(true);
+    setError(null);
+    try {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+
+      if (isRejecting) {
+        if (!rejectionReason) throw new Error("Rejection reason is required.");
+        
+        // Use the existing resolve RAG endpoint to reject
+        await adminClaimsService.resolveRAGDecision(claimId, "rejected", rejectionReason);
+      } else {
+        if (!selectedPolicy || !amount) throw new Error("Policy and amount are required.");
+        const parsedAmount = parseFloat(amount);
+        if (isNaN(parsedAmount) || parsedAmount < 0) throw new Error("Invalid compensation amount.");
+
+        await supabase.from("rag_results").insert({
+          claim_id: claimId,
+          user_id: user?.id,
+          policy_covered: true,
+          coverage_type: selectedPolicy,
+          compensation_amount: parsedAmount,
+          coverage_reasoning: "Manually approved by admin due to technical failure.",
+          recommendation: "approve_payment",
+          needs_admin_review: false,
+          admin_action: "payment_approved",
+          status: "completed",
+        });
+
+        await adminClaimsService.resolveRAGDecision(claimId, "payment_approved");
+      }
+
+      // Mark notification as resolved
+      await supabase
+        .from("admin_notifications")
+        .update({ is_resolved: true, resolved_at: new Date().toISOString() })
+        .eq("id", notificationId);
+
+      onResolved();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="space-y-5">
+      <p className="text-sm text-white/60">
+        The AI RAG policy assessment agent failed. Review the previous liability results and manually determine coverage and compensation.
+      </p>
+
+      {/* Context Panel */}
+      {loadingContext ? (
+        <div className="animate-pulse h-20 bg-white/5 rounded-xl" />
+      ) : liabilityResult ? (
+        <div className="rounded-xl border border-white/10 bg-black/20 p-4 space-y-2 text-sm">
+          <div className="flex items-center gap-2 text-white/50 mb-2">
+            <FileText className="h-4 w-4" /> 
+            <span className="font-semibold text-white/80">Previous Agent Context (Liability)</span>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <p className="text-white/40 text-xs">Scenario Plausibility</p>
+              <p className="text-white/90 capitalize">{liabilityResult.scenario_plausibility}</p>
+            </div>
+            <div>
+              <p className="text-white/40 text-xs">Confidence</p>
+              <p className="text-white/90">{liabilityResult.confidence_percentage}%</p>
+            </div>
+          </div>
+          <div className="mt-2">
+            <p className="text-white/40 text-xs">Reasoning</p>
+            <p className="text-white/80 text-xs leading-relaxed mt-1 line-clamp-3" title={liabilityResult.overall_reasoning}>
+              {liabilityResult.overall_reasoning}
+            </p>
+          </div>
+        </div>
+      ) : null}
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label className="block text-xs font-medium text-white/60 mb-1.5">Applicable Policy</label>
+          <select
+            value={selectedPolicy}
+            title="Select the coverage type that applies to this claim based on the policy details and claim context."
+            onChange={(e) => setSelectedPolicy(e.target.value)}
+            disabled={isRejecting}
+            className="w-full bg-white/[0.03] border border-white/10 rounded-lg p-2.5 text-sm text-white focus:outline-none focus:border-emerald-500/50 disabled:opacity-50"
+          >
+            <option value="" disabled>Select coverage...</option>
+            {coverages.length > 0 ? (
+              coverages.map(c => <option key={c} value={c} className="bg-gray-900">{c}</option>)
+            ) : (
+              <>
+                <option value="Collision Damage" className="bg-gray-900">Collision Damage</option>
+                <option value="Comprehensive" className="bg-gray-900">Comprehensive</option>
+                <option value="Third-Party Liability" className="bg-gray-900">Third-Party Liability</option>
+              </>
+            )}
+          </select>
+        </div>
+
+        <div>
+          <label className="block text-xs font-medium text-white/60 mb-1.5">Compensation Amount ($)</label>
+          <input
+            type="number"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            disabled={isRejecting}
+            placeholder="0.00"
+            className="w-full bg-white/[0.03] border border-white/10 rounded-lg p-2.5 text-sm text-white placeholder-white/20 focus:outline-none focus:border-emerald-500/50 disabled:opacity-50"
+          />
+        </div>
+      </div>
+
+      <div className="flex items-center gap-2 my-2">
+        <input 
+          type="checkbox" 
+          id="rejectClaim" 
+          checked={isRejecting} 
+          onChange={(e) => setIsRejecting(e.target.checked)}
+          className="rounded border-white/20 bg-white/5"
+        />
+        <label htmlFor="rejectClaim" className="text-sm font-medium text-red-400 cursor-pointer">
+          Reject Claim Instead
+        </label>
+      </div>
+
+      {isRejecting && (
+        <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="pt-2">
+          <label className="block text-xs font-medium text-red-400/80 mb-1.5">Rejection Reason</label>
+          <textarea
+            value={rejectionReason}
+            onChange={(e) => setRejectionReason(e.target.value)}
+            placeholder="Explain why the policy does not cover this claim..."
+            className="w-full h-24 bg-red-500/5 border border-red-500/20 rounded-lg p-2.5 text-sm text-white placeholder-white/20 focus:outline-none focus:border-red-500/50 resize-none"
+          />
+        </motion.div>
+      )}
+
+      {error && <p className="text-sm text-red-400">{error}</p>}
+
+      <button
+        onClick={handleSubmit}
+        disabled={submitting || (!isRejecting && (!selectedPolicy || !amount)) || (isRejecting && !rejectionReason)}
+        className={`w-full flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold text-white transition-colors disabled:opacity-50 ${
+          isRejecting ? "bg-red-600 hover:bg-red-500" : "bg-emerald-600 hover:bg-emerald-500"
+        }`}
+      >
+        {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
+        {submitting ? "Saving..." : isRejecting ? "Confirm Rejection" : "Approve Compensation"}
+      </button>
+    </div>
+  );
+}
+
+
 const TASK_CONFIG: Record<string, { icon: React.ReactNode; title: string }> = {
   classification: {
     icon: <Eye className="h-5 w-5" />,
@@ -413,6 +817,14 @@ const TASK_CONFIG: Record<string, { icon: React.ReactNode; title: string }> = {
   vehicle_type_classification: {
     icon: <Tag className="h-5 w-5" />,
     title: "Vehicle Type Classification — Manual Override",
+  },
+  damage_detection: {
+    icon: <AlertTriangle className="h-5 w-5" />,
+    title: "Damage Detection — Manual Override",
+  },
+  rag_assessment: {
+    icon: <ShieldAlert className="h-5 w-5" />,
+    title: "Policy Assessment (RAG) — Manual Override",
   },
 };
 
@@ -470,6 +882,23 @@ export function ManualInterventionPanel({
       {notification.failed_task === "vehicle_type_classification" && (
         <VehicleTypeForm
           images={images}
+          claimId={claimId}
+          notificationId={notification.id}
+          onResolved={onResolved}
+        />
+      )}
+
+      {notification.failed_task === "damage_detection" && (
+        <DamageDetectionForm
+          images={images}
+          claimId={claimId}
+          notificationId={notification.id}
+          onResolved={onResolved}
+        />
+      )}
+
+      {(notification.failed_task === "rag_assessment" || notification.failed_task === "rag") && (
+        <RAGAgentForm
           claimId={claimId}
           notificationId={notification.id}
           onResolved={onResolved}
