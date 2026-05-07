@@ -42,15 +42,19 @@ class ImagePipelineSummaryAgent:
         return graph.compile()
 
     def _route_after_fetch(self, state: ImagePipelineSummaryAgentState) -> str:
-        if state.status == "failed" and state.retry_count < 3:
-            print(f"  [PipelineSummary] Retrying fetch_results (Attempt {state.retry_count}/3)...")
-            return "fetch_results"
+        if state.status == "failed":
+            if state.retry_count < 3:
+                print(f"  [PipelineSummary] Retrying fetch_results (Attempt {state.retry_count}/3)...")
+                return "fetch_results"
+            return "finalize"
         return "aggregate_results"
 
     def _route_after_aggregate(self, state: ImagePipelineSummaryAgentState) -> str:
-        if state.status == "failed" and state.retry_count < 3:
-            print(f"  [PipelineSummary] Retrying aggregate_results (Attempt {state.retry_count}/3)...")
-            return "aggregate_results"
+        if state.status == "failed":
+            if state.retry_count < 3:
+                print(f"  [PipelineSummary] Retrying aggregate_results (Attempt {state.retry_count}/3)...")
+                return "aggregate_results"
+            return "finalize"
         return "finalize"
 
 
@@ -253,25 +257,24 @@ class ImagePipelineSummaryAgent:
             dict - final status update
         """
         if state.status == "failed":
-            if state.retry_count >= 3:
-                print(f"  [PipelineSummary] Max retries exhausted! Sending claim {state.claim_id} to admin.")
+            print(f"  [PipelineSummary] Technical failure! Sending claim {state.claim_id} to admin.")
 
-                admin_message = (
-                    f"Image Pipeline Summary agent failed after 3 retries for claim {state.claim_id}. "
-                    f"Error: {state.error}. "
-                    f"The individual agent results may exist in their respective tables, but the "
-                    f"pipeline summary could not be generated. Manual review of all image analysis "
-                    f"results is required before proceeding to liability assessment."
-                )
+            admin_message = (
+                f"Image Pipeline Summary agent failed for claim {state.claim_id}. "
+                f"Error: {state.error}. "
+                f"The individual agent results may exist in their respective tables, but the "
+                f"pipeline summary could not be generated. Manual review of all image analysis "
+                f"results is required before proceeding to liability assessment."
+            )
 
-                try:
-                    self._update_claim_status_tool.invoke({
-                        "status": "under_review",
-                        "ai_verdict": f"Pipeline Summary Failed: {state.error}",
-                    })
-                    self._log_agent_failure_tool.invoke(admin_message)
-                except Exception as e:
-                    print(f"  Failed to set under_review status: {str(e)}")
+            try:
+                self._update_claim_status_tool.invoke({
+                    "status": "under_review",
+                    "ai_verdict": f"Pipeline Summary Failed: {state.error}",
+                })
+                self._log_agent_failure_tool.invoke(admin_message)
+            except Exception as e:
+                print(f"  Failed to set under_review status: {str(e)}")
 
             return {"status": "failed"}
 
