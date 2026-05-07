@@ -1,8 +1,3 @@
--- ============================================
--- SUPABASE SQL SETUP
--- Run this in the Supabase SQL Editor
--- ============================================
-
 -- 1. Create the users table
 CREATE TABLE IF NOT EXISTS public.users (
   id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -91,8 +86,6 @@ CREATE TRIGGER on_auth_user_created
   EXECUTE FUNCTION public.handle_new_user();
 
 -- 6. Storage RLS policies for users_image bucket
--- Make sure the bucket "users_image" exists in Supabase Storage dashboard
-
 -- Allow users to upload their own profile images
 CREATE POLICY "Users can upload own profile image"
   ON storage.objects FOR INSERT
@@ -117,7 +110,7 @@ CREATE POLICY "Users can read own profile image"
     AND (storage.foldername(name))[1] = auth.uid()::text
   );
 
--- Allow public read access to profile images (so they can be displayed)
+-- Allow public read access to profile images 
 CREATE POLICY "Public can read profile images"
   ON storage.objects FOR SELECT
   USING (bucket_id = 'users_image');
@@ -131,16 +124,6 @@ CREATE POLICY "Users can delete own profile image"
   );
 
 -- 7. Storage cleanup should be done via Storage API in application code.
--- Direct SQL deletes on storage.objects are not allowed by Supabase.
--- If you previously created the old trigger, run:
--- DROP TRIGGER IF EXISTS on_user_deleted ON public.users;
--- DROP FUNCTION IF EXISTS public.handle_user_deleted();
-
--- ============================================
--- 8. Custom Email Confirmations table
--- Used for admin-created users (bypasses Supabase email confirmation)
--- ============================================
-
 CREATE TABLE IF NOT EXISTS public.email_confirmations (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -153,21 +136,16 @@ CREATE TABLE IF NOT EXISTS public.email_confirmations (
 -- Enable RLS
 ALTER TABLE public.email_confirmations ENABLE ROW LEVEL SECURITY;
 
--- Only the service role (server-side) should access this table.
--- No client-side policies needed — the API route uses the service role key.
 
--- ============================================
+
 -- 9. Claims table
--- Stores insurance claims submitted by users for AI evaluation
--- ============================================
-
 CREATE TABLE IF NOT EXISTS public.claims (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   title TEXT NOT NULL,
   description TEXT NOT NULL,
   status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'under_review', 'approved', 'rejected')),
-  ai_verdict TEXT,           -- AI agent's reasoning / verdict explanation
+  ai_verdict TEXT,        
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -212,20 +190,16 @@ CREATE TRIGGER on_claims_updated
   FOR EACH ROW
   EXECUTE FUNCTION public.handle_updated_at();
 
--- ============================================
 -- 10. Claim images table
--- Tracks images uploaded to the claim_images storage bucket
--- ============================================
-
 CREATE TABLE IF NOT EXISTS public.claim_images (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   claim_id UUID NOT NULL REFERENCES public.claims(id) ON DELETE CASCADE,
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  storage_path TEXT NOT NULL,       -- path inside claim_images bucket
+  storage_path TEXT NOT NULL,       
   file_name TEXT NOT NULL,
   file_size BIGINT,
   mime_type TEXT,
-  is_vehical BOOLEAN DEFAULT NULL, -- set by AI vehicle detection agent
+  is_vehical BOOLEAN DEFAULT NULL, 
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -252,11 +226,8 @@ CREATE POLICY "Admins can view all claim images"
   ON public.claim_images FOR SELECT
   USING (public.is_admin());
 
--- ============================================
--- 10b. Classification Results table
--- Stores the output of the classification agent per claim
--- ============================================
 
+-- 10b. Classification Results table
 CREATE TABLE IF NOT EXISTS public.classification_results (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   claim_id UUID NOT NULL REFERENCES public.claims(id) ON DELETE CASCADE,
@@ -282,11 +253,8 @@ CREATE POLICY "Admins can view all classification results"
   ON public.classification_results FOR SELECT
   USING (public.is_admin());
 
--- ============================================
--- 10c. Same Vehicle Results table
--- Stores the output of the same vehicle detection agent per claim
--- ============================================
 
+-- 10c. Same Vehicle Results table
 CREATE TABLE IF NOT EXISTS public.same_vehicle_results (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   claim_id UUID NOT NULL REFERENCES public.claims(id) ON DELETE CASCADE,
@@ -312,11 +280,8 @@ CREATE POLICY "Admins can view all same vehicle results"
   ON public.same_vehicle_results FOR SELECT
   USING (public.is_admin());
 
--- ============================================
--- 10d. Vehicle Type Results table
--- Stores the output of the vehicle type classification agent per claim
--- ============================================
 
+-- 10d. Vehicle Type Results table
 CREATE TABLE IF NOT EXISTS public.vehicle_type_results (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   claim_id UUID NOT NULL REFERENCES public.claims(id) ON DELETE CASCADE,
@@ -342,11 +307,8 @@ CREATE POLICY "Admins can view all vehicle type results"
   USING (public.is_admin());
 
 
--- ============================================
--- 10e. Admin Notifications table
--- Stores agent failures and fallback alerts for administrators
--- ============================================
 
+-- 10e. Admin Notifications table
 CREATE TABLE IF NOT EXISTS public.admin_notifications (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   claim_id UUID NOT NULL REFERENCES public.claims(id) ON DELETE CASCADE,
@@ -372,11 +334,40 @@ CREATE POLICY "Admins can update admin notifications"
   WITH CHECK (public.is_admin());
 
 
--- ============================================
--- 11. Storage RLS policies for claim_images bucket
--- Make sure the bucket "claim_images" exists in Supabase Storage dashboard
--- ============================================
 
+-- 10f. Claimant Notifications table
+CREATE TABLE IF NOT EXISTS public.claimant_notifications (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  claim_id UUID NOT NULL REFERENCES public.claims(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  type TEXT NOT NULL CHECK (type IN ('progress', 'approved', 'rejected')),
+  message TEXT NOT NULL,
+  is_read BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Enable RLS on claimant_notifications table
+ALTER TABLE public.claimant_notifications ENABLE ROW LEVEL SECURITY;
+
+-- Users can view their own notifications
+CREATE POLICY "Users can view own claimant notifications"
+  ON public.claimant_notifications FOR SELECT
+  USING (auth.uid() = user_id);
+
+-- Users can update their own notifications
+CREATE POLICY "Users can update own claimant notifications"
+  ON public.claimant_notifications FOR UPDATE
+  USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
+
+-- Admins can view all claimant notifications
+CREATE POLICY "Admins can view all claimant notifications"
+  ON public.claimant_notifications FOR SELECT
+  USING (public.is_admin());
+
+
+
+-- 11. Storage RLS policies for claim_images bucket
 -- Users can upload claim images into their own folder
 CREATE POLICY "Users can upload claim images"
   ON storage.objects FOR INSERT
@@ -409,11 +400,8 @@ CREATE POLICY "Admins can read all claim images"
     AND public.is_admin()
   );
 
--- ============================================
--- 12. Disputes table
--- Stores disputes filed against rejected claims
--- ============================================
 
+-- 12. Disputes table
 CREATE TABLE IF NOT EXISTS public.disputes (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -438,7 +426,7 @@ CREATE POLICY "Users can insert own disputes"
   ON public.disputes FOR INSERT
   WITH CHECK (auth.uid() = user_id);
 
--- Users can update their own disputes (optional, for future UI)
+-- Users can update their own disputes
 CREATE POLICY "Users can update own disputes"
   ON public.disputes FOR UPDATE
   USING (auth.uid() = user_id)
@@ -455,12 +443,8 @@ CREATE TRIGGER on_disputes_updated
   FOR EACH ROW
   EXECUTE FUNCTION public.handle_updated_at();
 
--- ============================================
--- 13. Storage RLS policies for dispute_images bucket
--- Make sure the bucket "dispute_images" exists in Supabase Storage dashboard
--- Path pattern: {user_id}/{claim_id}/{timestamp}-{filename}
--- ============================================
 
+-- 13. Storage RLS policies for dispute_images bucket
 -- Users can upload dispute images into their own folder
 CREATE POLICY "Users can upload dispute images"
   ON storage.objects FOR INSERT
@@ -500,4 +484,156 @@ CREATE POLICY "Admins can read all dispute images"
     bucket_id = 'dispute_images'
     AND public.is_admin()
   );
+
+
+-- 14. Damage Detection Results table
+CREATE TABLE IF NOT EXISTS public.damage_detection_results (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  claim_id UUID NOT NULL REFERENCES public.claims(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  images_analyzed INT NOT NULL DEFAULT 0,
+  images_with_damage INT NOT NULL DEFAULT 0,
+  claim_rejected BOOLEAN NOT NULL DEFAULT FALSE,
+  damage_details JSONB,
+  damage_summary TEXT,
+  status TEXT NOT NULL DEFAULT 'completed',
+  error TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Enable RLS on damage_detection_results table
+ALTER TABLE public.damage_detection_results ENABLE ROW LEVEL SECURITY;
+
+-- Users can view their own damage detection results
+CREATE POLICY "Users can view own damage detection results"
+  ON public.damage_detection_results FOR SELECT
+  USING (auth.uid() = user_id);
+
+-- Admins can view all damage detection results
+CREATE POLICY "Admins can view all damage detection results"
+  ON public.damage_detection_results FOR SELECT
+  USING (public.is_admin());
+
+
+-- 15. Image Pipeline Results table
+CREATE TABLE IF NOT EXISTS public.image_pipeline_results (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  claim_id UUID NOT NULL REFERENCES public.claims(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  total_images INT NOT NULL DEFAULT 0,
+  vehicle_images_count INT NOT NULL DEFAULT 0,
+  non_vehicle_images_count INT NOT NULL DEFAULT 0,
+  is_same_vehicle BOOLEAN NOT NULL DEFAULT FALSE,
+  vehicle_type TEXT,
+  has_damage BOOLEAN NOT NULL DEFAULT FALSE,
+  images_with_damage INT NOT NULL DEFAULT 0,
+  damage_details JSONB,
+  damage_summary TEXT,
+  all_checks_passed BOOLEAN NOT NULL DEFAULT FALSE,
+  pipeline_summary TEXT,
+  status TEXT NOT NULL DEFAULT 'completed',
+  error TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Enable RLS on image_pipeline_results table
+ALTER TABLE public.image_pipeline_results ENABLE ROW LEVEL SECURITY;
+
+-- Users can view their own pipeline results
+CREATE POLICY "Users can view own image pipeline results"
+  ON public.image_pipeline_results FOR SELECT
+  USING (auth.uid() = user_id);
+
+-- Admins can view all pipeline results
+CREATE POLICY "Admins can view all image pipeline results"
+  ON public.image_pipeline_results FOR SELECT
+  USING (public.is_admin());
+
+
+-- 16. RAG Results table
+CREATE TABLE IF NOT EXISTS public.rag_results (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  claim_id UUID NOT NULL REFERENCES public.claims(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  policy_covered BOOLEAN NOT NULL DEFAULT FALSE,
+  coverage_type TEXT,
+  applicable_sections JSONB,
+  exclusions JSONB,
+  compensation_amount FLOAT NOT NULL DEFAULT 0.0,
+  compensation_breakdown JSONB,
+  coverage_reasoning TEXT,
+  recommendation TEXT NOT NULL DEFAULT 'needs_human_review',
+  flags JSONB,
+  needs_admin_review BOOLEAN NOT NULL DEFAULT FALSE,
+  admin_action TEXT DEFAULT NULL CHECK (admin_action IS NULL OR admin_action IN ('pending', 'payment_approved', 'rejected')),
+  status TEXT NOT NULL DEFAULT 'completed',
+  error TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Enable RLS on rag_results table
+ALTER TABLE public.rag_results ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "Service role can insert RAG results"
+  ON public.rag_results FOR INSERT
+  WITH CHECK (true);
+
+-- Users can view their own RAG results
+CREATE POLICY "Users can view own RAG results"
+  ON public.rag_results FOR SELECT
+  USING (auth.uid() = user_id);
+
+-- Admins can view all RAG results
+CREATE POLICY "Admins can view all RAG results"
+  ON public.rag_results FOR SELECT
+  USING (public.is_admin());
+
+-- Admins can update RAG results (for admin_action changes)
+CREATE POLICY "Admins can update RAG results"
+  ON public.rag_results FOR UPDATE
+  USING (public.is_admin())
+  WITH CHECK (public.is_admin());
+
+
+-- 17. Liability Results table
+CREATE TABLE IF NOT EXISTS public.liability_results (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  claim_id UUID NOT NULL REFERENCES public.claims(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  overall_confidence FLOAT NOT NULL DEFAULT 0.0,
+  confidence_percentage INT NOT NULL DEFAULT 0,
+  scenario_plausibility TEXT NOT NULL DEFAULT 'questionable',
+  scenario_reasoning TEXT,
+  damage_alignments JSONB,
+  consistent_damages INT NOT NULL DEFAULT 0,
+  inconsistent_damages INT NOT NULL DEFAULT 0,
+  overall_reasoning TEXT,
+  recommendation TEXT NOT NULL DEFAULT 'needs_human_review',
+  flags JSONB,
+  needs_admin_review BOOLEAN NOT NULL DEFAULT FALSE,
+  admin_action TEXT DEFAULT NULL CHECK (admin_action IS NULL OR admin_action IN ('pending', 'accepted', 'overridden')),
+  status TEXT NOT NULL DEFAULT 'completed',
+  error TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Enable RLS on liability_results table
+ALTER TABLE public.liability_results ENABLE ROW LEVEL SECURITY;
+
+-- Users can view their own liability results
+CREATE POLICY "Users can view own liability results"
+  ON public.liability_results FOR SELECT
+  USING (auth.uid() = user_id);
+
+-- Admins can view all liability results
+CREATE POLICY "Admins can view all liability results"
+  ON public.liability_results FOR SELECT
+  USING (public.is_admin());
+
+-- Admins can update liability results (for admin_action changes)
+CREATE POLICY "Admins can update liability results"
+  ON public.liability_results FOR UPDATE
+  USING (public.is_admin())
+  WITH CHECK (public.is_admin());
 
