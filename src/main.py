@@ -11,29 +11,44 @@ except ModuleNotFoundError:
     from src import config
     from src.domain.entities import ClaimEvent
 
-try:
-    from infrastructure.redis.redis_client import publish_to_stream
-except ModuleNotFoundError:
-    from infrastructure.redis.redis_client import publish_to_stream
+from infrastructure.redis.redis_client import publish_to_stream
+from infrastructure.supabase.supabase_client import get_user_from_token
 
-try:
-    from infrastructure.supabase.supabase_client import get_user_from_token
-except ModuleNotFoundError:
-    from infrastructure.supabase.supabase_client import get_user_from_token
+from contextlib import asynccontextmanager
+import threading
 
-app=FastAPI()
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    def start_background_workers():
+        try:
+            from application.workflow import run_workflow
+            from application.services.classification_service import run_classification_service
+            from application.services.damage_detection_service import run_damage_detection_service
+            from application.services.image_pipeline_summary_service import run_image_pipeline_summary_service
+            from application.services.liability_service import run_liability_service
+            from application.services.rag_service import process_rag_task
+            from application.services.same_vehicle_service import run_same_vehicle_service
+            from application.services.vehicle_type_service import run_vehicle_type_service
+            
+            for func in [run_workflow, run_classification_service, run_damage_detection_service, run_image_pipeline_summary_service, run_liability_service, process_rag_task, run_same_vehicle_service, run_vehicle_type_service]:
+                threading.Thread(target=func, daemon=True).start()
+            print("Successfully started all background AI agents and workflow orchestrator")
+        except Exception as e:
+            print(f"Failed to start background workers: {e}")
+            
+    start_background_workers()
+    yield
+
+app=FastAPI(lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
     allow_methods=["*"],
     allow_headers=["*"],
-    allow_credentials=True,
+    allow_credentials=False,
 )
 
-try:
-    from infrastructure.socket.socket_server import socket_app
-except ModuleNotFoundError:
-    from infrastructure.socket.socket_server import socket_app
+from infrastructure.socket.socket_server import socket_app
 
 app.mount("/socket.io", socket_app)
 
@@ -127,11 +142,20 @@ async def resolve_liability_endpoint(event_data: dict, authorization: str = Head
             }).eq("claim_id", claim_id).execute()
 
             # Update claim status to rejected with the AI reasoning
+            ai_verdict = "Claim rejected after admin review. The AI liability assessment was confirmed by admin."
             adapter.update_claim_status(
                 claim_id=claim_id,
                 status="rejected",
-                ai_verdict="Claim rejected after admin review. The AI liability assessment was confirmed by admin."
+                ai_verdict=ai_verdict
             )
+
+            try:
+                from domain.tools.update_claim_status_tool import send_status_update_email, _save_claimant_notification_to_db, _emit_claimant_socket_event
+                send_status_update_email(claim_id, "rejected", ai_verdict)
+                _save_claimant_notification_to_db(claim_id, "rejected", ai_verdict)
+                _emit_claimant_socket_event(claim_id, "rejected", ai_verdict)
+            except Exception as e:
+                print(f"Failed to send email/notification to user: {e}")
 
             return {
                 "status": "success",
@@ -218,6 +242,7 @@ async def resolve_rag_endpoint(event_data: dict, authorization: str = Header(...
 
     claim_id = event_data.get("claim_id")
     action = event_data.get("action")
+    rejection_reason = event_data.get("rejection_reason")
 
     if not claim_id or action not in ("payment_approved", "rejected"):
         raise HTTPException(status_code=400, detail="Missing claim_id or invalid action")
@@ -235,13 +260,24 @@ async def resolve_rag_endpoint(event_data: dict, authorization: str = Header(...
         }).eq("claim_id", claim_id).execute()
 
         new_status = "approved" if action == "payment_approved" else "rejected"
-        ai_verdict = "Payment Approved by Admin." if action == "payment_approved" else "Claim rejected after admin review of RAG policy assessment."
+        if action == "payment_approved":
+            ai_verdict = "Payment Approved by Admin."
+        else:
+            ai_verdict = rejection_reason if rejection_reason else "Claim rejected after admin review of RAG policy assessment."
 
         adapter.update_claim_status(
             claim_id=claim_id,
             status=new_status,
             ai_verdict=ai_verdict
         )
+
+        try:
+            from domain.tools.update_claim_status_tool import send_status_update_email, _save_claimant_notification_to_db, _emit_claimant_socket_event
+            send_status_update_email(claim_id, new_status, ai_verdict)
+            _save_claimant_notification_to_db(claim_id, new_status, ai_verdict)
+            _emit_claimant_socket_event(claim_id, new_status, ai_verdict)
+        except Exception as e:
+            print(f"Failed to send email/notification to user: {e}")
 
         return {
             "status": "success",
@@ -273,4 +309,89 @@ async def policy_status_endpoint(authorization: str = Header(...)):
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/internal/emit-progress", status_code=status.HTTP_200_OK)
+async def emit_progress_endpoint(payload: dict):
+    claim_id = payload.get("claim_id")
+    message = payload.get("message")
+    
+    if not claim_id or not message:
+        raise HTTPException(status_code=400, detail="Missing claim_id or message")
+        
+    try:
+        from infrastructure.socket.socket_server import sio
+        await sio.emit("claim_progress", payload)
+        return {"status": "success"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/internal/emit-agent-failure", status_code=status.HTTP_200_OK)
+async def emit_agent_failure_endpoint(payload: dict):
+    """Internal endpoint for background threads to emit admin manual review notifications."""
+    claim_id = payload.get("claim_id")
+    failed_task = payload.get("failed_task")
+    message = payload.get("message")
+    
+    if not claim_id or not failed_task or not message:
+        raise HTTPException(status_code=400, detail="Missing claim_id, failed_task, or message")
+        
+    try:
+        from infrastructure.socket.socket_server import sio
+        await sio.emit("agent_failure", {
+            "claim_id": claim_id,
+            "failed_task": failed_task,
+            "message": message,
+        })
+        return {"status": "success"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/internal/emit-claim-status", status_code=status.HTTP_200_OK)
+async def emit_claim_status_endpoint(payload: dict):
+    """Internal endpoint for background threads to emit claimant approval/rejection notifications."""
+    claim_id = payload.get("claim_id")
+    event_type = payload.get("type")  # "approved" or "rejected"
+    message = payload.get("message")
+    
+    if not claim_id or not event_type or not message:
+        raise HTTPException(status_code=400, detail="Missing claim_id, type, or message")
+        
+    try:
+        from infrastructure.socket.socket_server import sio
+        event_name = f"claim_{event_type}"  # "claim_approved" or "claim_rejected"
+        await sio.emit(event_name, {
+            "claim_id": claim_id,
+            "message": message,
+        })
+        return {"status": "success"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/policy/coverages", status_code=status.HTTP_200_OK)
+async def get_policy_coverages(authorization: str = Header(...)):
+    if not authorization:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Authorization header missing")
+
+    try:
+        import docx
+        import re
+        import os
+        
+        policy_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'atlas_policy_v3.docx')
+        doc = docx.Document(policy_path)
+        
+        coverages = []
+        for p in doc.paragraphs:
+            text = p.text.strip()
+           
+            if re.match(r'^(4|5)\.\d+\s', text) and len(text) < 100:
+                cleaned_text = text.replace('\ufffd', '-').strip()
+                cleaned_text = re.sub(r'^(4|5)\.\d+\s+', '', cleaned_text)
+                coverages.append(cleaned_text)
+                
+        return {"status": "success", "coverages": coverages}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to extract coverages: {str(e)}")
+
+
 
