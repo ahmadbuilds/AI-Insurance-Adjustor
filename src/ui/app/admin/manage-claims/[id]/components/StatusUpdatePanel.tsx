@@ -6,23 +6,19 @@ import { ClaimStatusBadge } from "../../components/ClaimStatusBadge";
 import { adminClaimsService } from "../../services/admin-claims.service";
 import type { ClaimStatus } from "../../types/admin-claims.types";
 
-// ── All allowed transitions (including reversions) ────────────────────────────
-// Every non-terminal state can be reverted; approved/rejected can go back to
-// under_review so an admin can correct an accidental decision.
-const ALLOWED_TRANSITIONS: Record<ClaimStatus, ClaimStatus[]> = {
+const ALLOWED_TRANSITIONS: Partial<Record<ClaimStatus, ClaimStatus[]>> = {
   pending:      ["under_review", "rejected"],
   under_review: ["approved", "rejected", "pending"],
-  approved:     ["under_review"],   // revert: accidental approval
-  rejected:     ["under_review"],   // revert: accidental rejection
+  approved:     ["under_review"],   
+  rejected:     ["under_review"], 
 };
 
-// Per-status button appearance
-const BUTTON_CONFIG: Record<ClaimStatus, {
+const BUTTON_CONFIG: Partial<Record<ClaimStatus, {
   label: string;
   isRevert?: boolean;
   activeClass: string;
   idleClass: string;
-}> = {
+}>> = {
   approved: {
     label: "Approve",
     activeClass: "bg-emerald-500/20 text-emerald-300 border-emerald-500/40",
@@ -47,7 +43,7 @@ const BUTTON_CONFIG: Record<ClaimStatus, {
 };
 
 // Feedback banners per resulting status
-const FEEDBACK_CONFIG: Record<ClaimStatus, { text: string; cls: string; icon: "check" | "info" | "warn" }> = {
+const FEEDBACK_CONFIG: Partial<Record<ClaimStatus, { text: string; cls: string; icon: "check" | "info" | "warn" }>> = {
   approved:     { text: "Claim approved successfully.",          cls: "border-emerald-500/20 bg-emerald-500/8 text-emerald-300", icon: "check" },
   rejected:     { text: "Claim rejected.",                       cls: "border-red-500/20 bg-red-500/8 text-red-400",             icon: "warn"  },
   under_review: { text: "Claim moved to Under Review.",         cls: "border-[#3B82F6]/20 bg-[#3B82F6]/8 text-[#3B82F6]",      icon: "info"  },
@@ -79,14 +75,13 @@ interface StatusUpdatePanelProps {
 }
 
 export function StatusUpdatePanel({ claimId, currentStatus, onUpdated }: StatusUpdatePanelProps) {
-  // Track which specific button is loading (null = none)
+
   const [loadingStatus, setLoadingStatus] = useState<ClaimStatus | null>(null);
   const [feedback, setFeedback] = useState<{ status: ClaimStatus; isError: boolean; msg?: string } | null>(null);
   const [verdict, setVerdict] = useState("");
 
-  const transitions = ALLOWED_TRANSITIONS[currentStatus];
+  const transitions = ALLOWED_TRANSITIONS[currentStatus] || [];
 
-  // Auto-dismiss feedback after 5 s
   useEffect(() => {
     if (!feedback) return;
     const t = setTimeout(() => setFeedback(null), 5000);
@@ -118,8 +113,8 @@ export function StatusUpdatePanel({ claimId, currentStatus, onUpdated }: StatusU
   const isAnyLoading = loadingStatus !== null;
 
   // Revert buttons are visually separated
-  const mainTransitions   = transitions.filter((s) => !BUTTON_CONFIG[s].isRevert);
-  const revertTransitions = transitions.filter((s) =>  BUTTON_CONFIG[s].isRevert);
+  const mainTransitions   = transitions.filter((s) => !BUTTON_CONFIG[s]?.isRevert);
+  const revertTransitions = transitions.filter((s) =>  BUTTON_CONFIG[s]?.isRevert);
 
   return (
     <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-white/5 to-white/[0.02] p-6">
@@ -153,6 +148,7 @@ export function StatusUpdatePanel({ claimId, currentStatus, onUpdated }: StatusU
         <div className="flex flex-wrap gap-2 mb-3">
           {mainTransitions.map((nextStatus) => {
             const cfg = BUTTON_CONFIG[nextStatus];
+            if (!cfg) return null;
             const isThis   = loadingStatus === nextStatus;
             const isOther  = isAnyLoading && !isThis;
 
@@ -184,6 +180,7 @@ export function StatusUpdatePanel({ claimId, currentStatus, onUpdated }: StatusU
           <div className="flex flex-wrap gap-2">
             {revertTransitions.map((nextStatus) => {
               const cfg = BUTTON_CONFIG[nextStatus];
+              if (!cfg) return null;
               const isThis  = loadingStatus === nextStatus;
               const isOther = isAnyLoading && !isThis;
 
@@ -222,10 +219,10 @@ export function StatusUpdatePanel({ claimId, currentStatus, onUpdated }: StatusU
       )}
 
       {/* Feedback banner — auto-dismisses after 5 s */}
-      {feedback && !feedback.isError && (
-        <div className={`mt-4 flex items-center gap-2.5 rounded-xl border px-4 py-3 text-sm transition-all ${FEEDBACK_CONFIG[feedback.status].cls}`}>
-          <FeedbackIcon type={FEEDBACK_CONFIG[feedback.status].icon} />
-          {FEEDBACK_CONFIG[feedback.status].text}
+      {feedback && !feedback.isError && FEEDBACK_CONFIG[feedback.status] && (
+        <div className={`mt-4 flex items-center gap-2.5 rounded-xl border px-4 py-3 text-sm transition-all ${FEEDBACK_CONFIG[feedback.status]!.cls}`}>
+          <FeedbackIcon type={FEEDBACK_CONFIG[feedback.status]!.icon} />
+          {FEEDBACK_CONFIG[feedback.status]!.text}
         </div>
       )}
       {feedback?.isError && (
