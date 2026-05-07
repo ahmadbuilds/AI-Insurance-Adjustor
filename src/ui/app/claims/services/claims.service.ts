@@ -93,6 +93,14 @@ class ClaimsService {
       }).catch(err => {
           console.error("Failed to trigger evaluation:", err);
       });
+
+      await fetch("/api/claims/notify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ claimId: claim.id }),
+      }).catch(err => {
+          console.error("Failed to send claim notification email:", err);
+      });
     }
   }
 }
