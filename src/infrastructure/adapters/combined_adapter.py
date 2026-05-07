@@ -41,6 +41,9 @@ class CombinedSupabaseAdapter(ImageRepositoryPort, ImageStoragePort, ClaimReposi
     def save_admin_notification(self, claim_id: str, message: str, failed_task: str) -> bool:
         return self._claim_adapter.save_admin_notification(claim_id, message, failed_task)
 
+    def save_claimant_notification(self, claim_id: str, user_id: str, notification_type: str, message: str) -> bool:
+        return self._claim_adapter.save_claimant_notification(claim_id, user_id, notification_type, message)
+
     def fetch_claim_details(self, claim_id: str) -> dict | None:
         return self._claim_adapter.fetch_claim_details(claim_id)
 

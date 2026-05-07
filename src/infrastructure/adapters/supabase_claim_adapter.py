@@ -53,6 +53,35 @@ class SupabaseClaimAdapter(ClaimRepositoryPort):
         )
         return bool(response.data)
 
+    def save_claimant_notification(self, claim_id: str, user_id: str, notification_type: str, message: str) -> bool:
+        """
+        Insert a new claimant notification into the claimant_notifications table.
+        args:
+            claim_id: UUID of the claim associated with this notification.
+            user_id: UUID of the claimant who owns the claim.
+            notification_type: Type of notification ('progress', 'approved', 'rejected').
+            message: A message describing the notification.
+        returns:
+            True if the insert was successful, False otherwise.
+        """
+        try:
+            response = (
+                self._client
+                .table("claimant_notifications")
+                .insert({
+                    "claim_id": claim_id,
+                    "user_id": user_id,
+                    "type": notification_type,
+                    "message": message,
+                    "is_read": False
+                })
+                .execute()
+            )
+            return bool(response.data)
+        except Exception as e:
+            print(f"Failed to save claimant notification: {e}")
+            return False
+
     def fetch_claim_details(self, claim_id: str) -> dict | None:
         """Fetch the claim details (title, description, status) from the claims table."""
         response = (
@@ -101,4 +130,13 @@ class SupabaseClaimAdapter(ClaimRepositoryPort):
         raise NotImplementedError("Use SupabaseResultsAdapter or CombinedSupabaseAdapter")
 
     def save_liability_result(self, *args, **kwargs) -> bool:
+        raise NotImplementedError("Use SupabaseResultsAdapter or CombinedSupabaseAdapter")
+
+    def fetch_liability_result(self, *args, **kwargs) -> dict | None:
+        raise NotImplementedError("Use SupabaseResultsAdapter or CombinedSupabaseAdapter")
+
+    def save_rag_result(self, *args, **kwargs) -> bool:
+        raise NotImplementedError("Use SupabaseResultsAdapter or CombinedSupabaseAdapter")
+
+    def fetch_rag_result(self, *args, **kwargs) -> dict | None:
         raise NotImplementedError("Use SupabaseResultsAdapter or CombinedSupabaseAdapter")

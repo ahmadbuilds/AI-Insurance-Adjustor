@@ -31,7 +31,7 @@ class ChromaVectorStore(VectorStorePort, PolicyRetrievalPort):
             list: List of existing chunk hashes for the given document hash
         """
         try:
-            result = self.vector_store.get(where={"document_hash":document_hash},include=["metadatas","documents"])
+            result = self.vector_store._collection.get(where={"document_hash":document_hash},include=["metadatas","documents"])
             if result and "metadatas" in result and result["metadatas"]:
                 chunk_hashes = [metadata.get("chunk_hash") for metadata in result["metadatas"] if "chunk_hash" in metadata]
                 return chunk_hashes
@@ -49,10 +49,10 @@ class ChromaVectorStore(VectorStorePort, PolicyRetrievalPort):
             bool: True if deletion is successful, False otherwise
         """
         try:
-            result = self.vector_store.get(where={"chunk_hash": chunk_hash},include=["metadatas","documents"])
+            result = self.vector_store._collection.get(where={"chunk_hash": chunk_hash},include=["metadatas","documents"])
             if result and "ids" in result and result["ids"]:
                 ids_to_delete = result["ids"]
-                self.vector_store.delete(ids=ids_to_delete)
+                self.vector_store._collection.delete(ids=ids_to_delete)
             return True
         except Exception as e:
             print(f"Error deleting chunks by chunk hash: {e}")

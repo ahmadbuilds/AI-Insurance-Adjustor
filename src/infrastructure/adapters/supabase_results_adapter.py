@@ -418,5 +418,8 @@ class SupabaseResultsAdapter(ClaimRepositoryPort):
     def save_admin_notification(self, *args, **kwargs) -> bool:
         raise NotImplementedError("Use SupabaseClaimAdapter or CombinedSupabaseAdapter")
 
+    def save_claimant_notification(self, *args, **kwargs) -> bool:
+        raise NotImplementedError("Use SupabaseClaimAdapter or CombinedSupabaseAdapter")
+
     def fetch_claim_details(self, *args, **kwargs) -> dict | None:
         raise NotImplementedError("Use SupabaseClaimAdapter or CombinedSupabaseAdapter")
