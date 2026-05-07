@@ -20,10 +20,8 @@ class RAGAgent:
         self.query_tool = create_query_policy_tool(policy_repo)
         
         self.llm = create_model_instance()
-        self.structured_llm = self.llm.with_structured_output(RAGAssessment, method="json_mode")
-
         self.prompt = get_rag_assessment_prompt()
-        self.chain = self.prompt | self.structured_llm
+        self.chain = self.prompt | self.llm
         self.graph = self._build_graph()
 
     def _build_graph(self):
@@ -71,14 +69,30 @@ class RAGAgent:
     def query_policy(self, state: RAGAgentState) -> dict:
         try:
             claim_desc = state.claim_details.get("description", "")
-            search_query = f"{claim_desc[:200]}" 
-            
-            res_str = self.query_tool.invoke({"query": search_query, "k": 5})
-            if res_str.startswith("Error"):
-                return {"status": "failed", "error": res_str, "retry_count": state.retry_count + 1}
-            
+            vehicle_class = state.claim_details.get("vehicle_class", "")
+            incident_type = state.claim_details.get("incident_type", "")
+            policy_tier = state.claim_details.get("policy_tier", "")
+
+            search_query = f"{vehicle_class} {incident_type} {policy_tier} {claim_desc[:150]}"
+            res1 = self.query_tool.invoke({"query": search_query, "k": 4})
+
+            res2 = self.query_tool.invoke({
+                "query": "liability score multiplier deductible sub-limit compensation calculation",
+                "k": 3
+            })
+
+            if res1.startswith("Error") and res2.startswith("Error"):
+                return {"status": "failed", "error": res1, "retry_count": state.retry_count + 1}
+
+            if res1.startswith("Error"):
+                combined = res2
+            elif res2.startswith("Error"):
+                combined = res1
+            else:
+                combined = f"{res1}\n\n{res2}"
+
             return {
-                "policy_sections": [{"content": res_str}],
+                "policy_sections": [{"content": combined}],
                 "status": "analyzing_coverage",
                 "error": None,
                 "retry_count": 0
@@ -98,14 +112,31 @@ class RAGAgent:
             claim_details_str = json.dumps(state.claim_details, indent=2) if state.claim_details else ""
             pipeline_str = json.dumps(state.pipeline_result, indent=2) if state.pipeline_result else ""
             liability_str = json.dumps(state.liability_result, indent=2) if state.liability_result else ""
-            policy_str = state.policy_sections[0]["content"] if state.policy_sections else ""
 
-            assessment: RAGAssessment = self.chain.invoke({
+            if not state.policy_sections or not state.policy_sections[0].get("content"):
+                return {
+                    "status": "failed",
+                    "error": "No policy sections retrieved.",
+                    "retry_count": state.retry_count + 1,
+                }
+
+            policy_str = state.policy_sections[0]["content"]
+
+            response = self.chain.invoke({
                 "claim_details": claim_details_str,
                 "pipeline_summary": pipeline_str,
                 "liability_result": liability_str,
                 "policy_sections": policy_str
             })
+            
+            response_text = response.content.strip()
+            if response_text.startswith("```"):
+                lines = response_text.split("\n")
+                lines = [l for l in lines if not l.strip().startswith("```")]
+                response_text = "\n".join(lines).strip()
+
+            parsed_json = json.loads(response_text)
+            assessment = RAGAssessment(**parsed_json)
 
             return {"assessment": assessment, "status": "completed", "error": None, "retry_count": 0}
         except Exception as e:
@@ -120,16 +151,18 @@ class RAGAgent:
 
     def decide_and_save(self, state: RAGAgentState) -> dict:
         try:
+            status = state.status
+            error = state.error
             if state.retry_count >= self.max_retries:
-                state.status = "failed"
-                if not state.error:
-                    state.error = "Max retries exceeded during RAG assessment."
+                status = "failed"
+                if not error:
+                    error = "Max retries exceeded during RAG assessment."
             
             # Save or alert
-            if state.status == "failed":
+            if status == "failed":
                 self.claim_repo.save_admin_notification(
                     state.claim_id,
-                    f"RAG Agent failed: {state.error}",
+                    f"RAG Agent failed: {error}",
                     "rag_assessment"
                 )
                 self.claim_repo.save_rag_result(
@@ -147,9 +180,9 @@ class RAGAgent:
                     needs_admin_review=True,
                     admin_action="pending",
                     status="failed",
-                    error=state.error
+                    error=error
                 )
-                return {"status": "failed"}
+                return {"status": "failed", "error": error}
 
             assessment = state.assessment
             needs_admin_review = assessment.policy_covered
@@ -188,7 +221,7 @@ class RAGAgent:
 
     #function to draw the graph for visualization and debugging purposes
     def build_graph_image(self):
-        png_bytes=self._graph.get_graph(xray=True).draw_mermaid_png()
+        png_bytes=self.graph.get_graph(xray=True).draw_mermaid_png()
         with open("rag_agent_graph.png", "wb") as f:
             f.write(png_bytes)
         display(Image(png_bytes))
