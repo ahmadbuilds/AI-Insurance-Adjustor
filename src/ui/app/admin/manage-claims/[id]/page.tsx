@@ -13,7 +13,8 @@ import { AiVerdictCard } from "./components/AiVerdictCard";
 import { ClaimImagesGrid } from "./components/ClaimImagesGrid";
 import { StatusUpdatePanel } from "./components/StatusUpdatePanel";
 import { ManualInterventionPanel } from "./components/ManualInterventionPanel";
-import { RAGResultCard } from "./components/RAGResultCard";
+import { AgentResultsReadonlyPanel } from "./components/AgentResultsReadonlyPanel";
+import { FinalApprovalPanel } from "./components/FinalApprovalPanel";
 import type { AdminClaimDetail, ClaimStatus } from "../types/admin-claims.types";
 
 function formatDate(iso: string) {
@@ -180,15 +181,7 @@ export default function ClaimDetailPage() {
                 {/* AI Verdict */}
                 <AiVerdictCard verdict={claim.ai_verdict} status={claim.status} />
 
-                {/* RAG Result Card */}
-                {ragResult && (
-                  <RAGResultCard
-                    claimId={claim.id}
-                    ragResult={ragResult}
-                    status={claim.status}
-                    onResolved={() => loadClaim()}
-                  />
-                )}
+
 
                 {/* Manual Intervention Panel — shown when an agent failed */}
                 {claim.active_notification && (
@@ -198,6 +191,11 @@ export default function ClaimDetailPage() {
                     images={claim.images}
                     onResolved={() => loadClaim()}
                   />
+                )}
+
+                {/* Read-only Results Panel — shown when claim is approved, rejected, or closed */}
+                {["approved", "rejected", "closed"].includes(claim.status) && (
+                  <AgentResultsReadonlyPanel claimId={claim.id} />
                 )}
 
                 {/* Images */}
@@ -216,12 +214,22 @@ export default function ClaimDetailPage() {
                   </div>
                 )}
 
-                {/* Status update */}
-                <StatusUpdatePanel
-                  claimId={claim.id}
-                  currentStatus={claim.status}
-                  onUpdated={handleStatusUpdated}
-                />
+                {/* Final Approval Panel for Approved claims */}
+                {claim.status === "approved" && !claim.active_notification && (
+                  <FinalApprovalPanel
+                    claimId={claim.id}
+                    onUpdated={handleStatusUpdated}
+                  />
+                )}
+
+                {/* Status update  */}
+                {!["rejected", "approved", "closed"].includes(claim.status) && !claim.active_notification && (
+                  <StatusUpdatePanel
+                    claimId={claim.id}
+                    currentStatus={claim.status}
+                    onUpdated={handleStatusUpdated}
+                  />
+                )}
 
                 {/* Metadata */}
                 <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-white/5 to-white/[0.02] p-6">
