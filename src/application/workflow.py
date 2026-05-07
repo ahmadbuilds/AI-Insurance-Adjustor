@@ -1,7 +1,9 @@
 from infrastructure.redis.redis_config import get_redis_client
 from infrastructure.redis.redis_client import publish_to_stream
 from domain.entities import ClaimEvent
-redis=get_redis_client()
+import os
+import requests
+
 
 #redis Result and new claim stream names
 RESULT_STREAM="stream:events:claim_results"
@@ -19,17 +21,34 @@ LIABILITY_STREAM="stream:task:liability"
 GROUP_NAME="orchestration_group"
 CONSUMER_NAME="orchestration_consumer"
 
+def emit_progress(claim_id, message):
+    try:
+        api_url = os.getenv("BACKEND_API_URL", "http://127.0.0.1:8000")
+        requests.post(
+            f"{api_url}/api/internal/emit-progress",
+            json={"claim_id": claim_id, "message": message},
+            timeout=5
+        )
+    except Exception as e:
+        print(f"Failed to emit progress: {e}")
+
 def setup_stream():
     """
     Function to set up the Redis streams and consumer groups for the workflow.
     """
+    redis = get_redis_client()
+    if not redis:
+        print("Redis client is not available")
+        return
+        
     for stream in [NEW_CLAIM_STREAM, RESULT_STREAM]:
         try:
             redis.xgroup_create(stream, GROUP_NAME, id="0", mkstream=True)
             print(f"Consumer group '{GROUP_NAME}' created for stream '{stream}'")
-        except redis.exceptions.ResponseError as e:
+        except Exception as e:
             if "BUSYGROUP" in str(e):
                 print(f"Consumer group '{GROUP_NAME}' already exists for stream '{stream}'")
+            else:
                 raise e
             
 def run_workflow():
@@ -45,6 +64,11 @@ def run_workflow():
     }
     
     while True:
+        redis = get_redis_client()
+        if not redis:
+            import time
+            time.sleep(5)
+            continue
         response=redis.xreadgroup(
             GROUP_NAME, 
             CONSUMER_NAME, 
@@ -70,6 +94,7 @@ def run_workflow():
 
                         #publishing the stream for classification task
                         payload=ClaimEvent(claim_id=claim_id,User_id=user_id).model_dump()
+                        emit_progress(claim_id, "Routed claim to classification task")
                         publish_to_stream(CLASSIFICATION_STREAM, payload)
 
                         #sending the ack to redis to mark the message as processed
@@ -90,6 +115,7 @@ def run_workflow():
                             if claim_rejected=="False":
                                 #claim has vehicle images — route to same vehicle detection
                                 payload=ClaimEvent(claim_id=claim_id,User_id=user_id).model_dump()
+                                emit_progress(claim_id, "Routed claim to same vehicle detection")
                                 publish_to_stream(SAME_VEHICLE_STREAM, payload)
                                 print(f"Routed claim {claim_id} to same vehicle detection")
                             else:
@@ -101,6 +127,7 @@ def run_workflow():
                             if claim_rejected=="False":
                                 #route to vehicle type classification
                                 payload=ClaimEvent(claim_id=claim_id,User_id=user_id).model_dump()
+                                emit_progress(claim_id, "Routed claim to vehicle type classification")
                                 publish_to_stream(VEHICLE_TYPE_STREAM, payload)
                                 print(f"Routed claim {claim_id} to vehicle type classification")
                             else:
@@ -112,6 +139,7 @@ def run_workflow():
                             if claim_rejected=="False":
                                 #route to damage detection
                                 payload=ClaimEvent(claim_id=claim_id,User_id=user_id).model_dump()
+                                emit_progress(claim_id, "Routed claim to damage detection")
                                 publish_to_stream(DAMAGE_DETECTION_STREAM, payload)
                                 print(f"Routed claim {claim_id} to damage detection")
                             else:
@@ -123,6 +151,7 @@ def run_workflow():
                             if claim_rejected=="False":
                                 #route to image pipeline summary
                                 payload=ClaimEvent(claim_id=claim_id,User_id=user_id).model_dump()
+                                emit_progress(claim_id, "Routed claim to image pipeline summary")
                                 publish_to_stream(PIPELINE_SUMMARY_STREAM, payload)
                                 print(f"Routed claim {claim_id} to image pipeline summary")
                             else:
@@ -134,6 +163,7 @@ def run_workflow():
                             if claim_rejected=="False":
                                 #route to liability assessment
                                 payload=ClaimEvent(claim_id=claim_id,User_id=user_id).model_dump()
+                                emit_progress(claim_id, "Routed claim to liability assessment")
                                 publish_to_stream(LIABILITY_STREAM, payload)
                                 print(f"Routed claim {claim_id} to liability assessment")
                             else:
@@ -150,6 +180,7 @@ def run_workflow():
                                 #confidence >= 70% — claim passed liability
                                 RAG_STREAM="stream:task:rag"
                                 payload=ClaimEvent(claim_id=claim_id,User_id=user_id).model_dump()
+                                emit_progress(claim_id, "Routed claim to RAG policy assessment")
                                 publish_to_stream(RAG_STREAM, payload)
                                 print(f"Liability passed — routed to RAG agent stream")
                             else:
