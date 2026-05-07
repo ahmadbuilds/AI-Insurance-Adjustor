@@ -29,6 +29,7 @@ class ClassificationAgent:
         self._update_vehicle_status_tool = update_vehicle_status_tool
         self._update_claim_status_tool = update_claim_status_tool
         self._log_agent_failure_tool = log_agent_failure_tool
+        self._model_name = model_name
         self._llm = create_model_instance(model_name=model_name, temperature=0)
         self._graph = self._build_graph()
 
@@ -51,15 +52,19 @@ class ClassificationAgent:
         return graph.compile()
 
     def _route_after_fetch(self, state: ClassificationAgentState) -> str:
-        if state.status == "failed" and state.error and "No images found" not in state.error and state.retry_count < 3:
-            print(f"  [Classification] Retrying fetch_images (Attempt {state.retry_count}/3)...")
-            return "fetch_images"
+        if state.status == "failed":
+            if state.error and "No images found" not in state.error and state.retry_count < 3:
+                print(f"  [Classification] Retrying fetch_images (Attempt {state.retry_count}/3)...")
+                return "fetch_images"
+            return "decide_claim"
         return "analyze_images"
 
     def _route_after_analyze(self, state: ClassificationAgentState) -> str:
-        if state.status == "failed" and state.retry_count < 3:
-            print(f"  [Classification] Retrying analyze_images (Attempt {state.retry_count}/3)...")
-            return "analyze_images"
+        if state.status == "failed":
+            if state.retry_count < 3:
+                print(f"  [Classification] Retrying analyze_images (Attempt {state.retry_count}/3)...")
+                return "analyze_images"
+            return "decide_claim"
         return "update_results"
 
 
@@ -74,6 +79,8 @@ class ClassificationAgent:
         """
         try:
             raw_images = self._fetch_images_tool.invoke({})
+
+            print(f"[Classification] Fetched {len(raw_images)} images for claim {state.claim_id}")
 
             if not raw_images:
                 return {
@@ -106,6 +113,7 @@ class ClassificationAgent:
 
         for image in state.images:
             try:
+                print(f"[Classification][LLM] model={self._model_name} image_id={image.id}")
                 prompt_messages = vehicle_detection_prompt.format_messages(
                     image_url=image.public_url
                 )
@@ -171,8 +179,17 @@ class ClassificationAgent:
             dict - containing whether the claim was rejected and status of the operation
         """
         if state.status == "failed":
-            if state.retry_count >= 3:
-                print(f"  [Classification] Max retries exhausted! Sending claim {state.claim_id} to admin.")
+            if state.error and "No images found" in state.error:
+                print(f"  [Classification] Rejecting claim {state.claim_id}: {state.error}")
+                try:
+                    self._update_claim_status_tool.invoke({
+                        "status": "rejected",
+                        "ai_verdict": f"Claim rejected: {state.error}",
+                    })
+                except Exception as e:
+                    print(f"  Failed to reject claim: {str(e)}")
+            else:
+                print(f"  [Classification] Technical failure! Sending claim {state.claim_id} to admin.")
                 try:
                     self._update_claim_status_tool.invoke({
                         "status": "under_review",
