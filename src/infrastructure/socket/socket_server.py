@@ -35,3 +35,41 @@ async def emit_liability_review(claim_id: str, confidence_percentage: int, recom
         "reasoning": reasoning,
     })
     print(f"Emitted liability_review for claim {claim_id} via Socket.IO")
+
+
+async def emit_claim_approved(claim_id: str, message: str):
+    """
+    Emit a real-time event to all connected claimant clients that their claim
+    has been approved.
+    """
+    await sio.emit("claim_approved", {
+        "claim_id": claim_id,
+        "message": message,
+    })
+    print(f"Emitted claim_approved for claim {claim_id} via Socket.IO")
+
+
+async def emit_claim_rejected(claim_id: str, message: str):
+    """
+    Emit a real-time event to all connected claimant clients that their claim
+    has been rejected.
+    """
+    await sio.emit("claim_rejected", {
+        "claim_id": claim_id,
+        "message": message,
+    })
+    print(f"Emitted claim_rejected for claim {claim_id} via Socket.IO")
+
+
+async def emit_admin_manual_review(claim_id: str, failed_task: str, message: str):
+    """
+    Emit a real-time event to all connected admin clients that a claim
+    requires manual review (e.g. low confidence liability or RAG policy decision).
+    Uses the same 'agent_failure' event type so the AdminNotifications component picks it up.
+    """
+    await sio.emit("agent_failure", {
+        "claim_id": claim_id,
+        "failed_task": failed_task,
+        "message": message,
+    })
+    print(f"Emitted admin manual review notification for claim {claim_id} ({failed_task}) via Socket.IO")
