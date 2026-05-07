@@ -230,18 +230,25 @@ Internal endpoints:
 
 Configuration currently loads values from `.env.local` in [src/config.py](src/config.py).
 
-Minimum environment variables observed in the code and compose file:
+Environment variables used by the codebase:
 
-- `SUPABASE_URL`
-- `SUPABASE_ANON_KEY`
-- `SUPABASE_SERVICE_ROLE_KEY`
-- `REDIS_PASSWORD`
+Required for core backend:
 
-Recommendation:
+- `SUPABASE_URL`: Supabase project URL.
+- `SUPABASE_ANON_KEY`: Supabase anon key for client reads.
+- `SUPABASE_SERVICE_ROLE_KEY`: Supabase service role key for server writes.
+- `REDIS_PASSWORD`: Redis password (used by compose and Redis client).
 
-- Keep production secrets in a managed secret store.
-- Use different service keys for read-only vs. service roles.
-- Rotate credentials periodically and monitor access.
+Optional or feature-specific:
+
+- `REDIS_HOST`: Redis host (default: `localhost`).
+- `REDIS_PORT`: Redis port (default: `6379`).
+- `BACKEND_API_URL`: Internal API base URL for tools and services (default: `http://127.0.0.1:8000`).
+- `GROQ_API_KEY`: LLM provider key for the Groq adapter.
+- `EMAILJS_SERVICE_ID`: EmailJS service id for claimant notifications.
+- `EMAILJS_TEMPLATE_ID`: EmailJS template id for notifications.
+- `EMAILJS_PUBLIC_KEY`: EmailJS public key.
+- `EMAILJS_PRIVATE_KEY`: EmailJS private key.
 
 ## Local Development
 
