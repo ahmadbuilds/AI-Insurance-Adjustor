@@ -29,6 +29,7 @@ class SameVehicleAgent:
         self._fetch_vehicle_images_tool = fetch_vehicle_images_tool
         self._update_claim_status_tool = update_claim_status_tool
         self._log_agent_failure_tool = log_agent_failure_tool
+        self._model_name = model_name
         self._llm = create_model_instance(model_name=model_name, temperature=0)
         self._graph = self._build_graph()
 
@@ -49,15 +50,19 @@ class SameVehicleAgent:
         return graph.compile()
 
     def _route_after_fetch(self, state: SameVehicleAgentState) -> str:
-        if state.status == "failed" and state.error and "No vehicle images found" not in state.error and state.retry_count < 3:
-            print(f"  [SameVehicle] Retrying fetch_vehicle_images (Attempt {state.retry_count}/3)...")
-            return "fetch_vehicle_images"
+        if state.status == "failed":
+            if state.error and "No vehicle images found" not in state.error and state.retry_count < 3:
+                print(f"  [SameVehicle] Retrying fetch_vehicle_images (Attempt {state.retry_count}/3)...")
+                return "fetch_vehicle_images"
+            return "decide_claim"
         return "analyze_same_vehicle"
 
     def _route_after_analyze(self, state: SameVehicleAgentState) -> str:
-        if state.status == "failed" and state.retry_count < 3:
-            print(f"  [SameVehicle] Retrying analyze_same_vehicle (Attempt {state.retry_count}/3)...")
-            return "analyze_same_vehicle"
+        if state.status == "failed":
+            if state.retry_count < 3:
+                print(f"  [SameVehicle] Retrying analyze_same_vehicle (Attempt {state.retry_count}/3)...")
+                return "analyze_same_vehicle"
+            return "decide_claim"
         return "decide_claim"
 
 
@@ -72,6 +77,8 @@ class SameVehicleAgent:
         """
         try:
             raw_images = self._fetch_vehicle_images_tool.invoke({})
+
+            print(f"[SameVehicle] Fetched {len(raw_images)} vehicle images for claim {state.claim_id}")
 
             if not raw_images:
                 return {
@@ -120,6 +127,7 @@ class SameVehicleAgent:
 
             human_msg = HumanMessage(content=human_content)
 
+            print(f"[SameVehicle][LLM] model={self._model_name} images={len(state.vehicle_images)}")
             response = self._llm.invoke([system_msg, human_msg])
             response_text = response.content.strip().lower()
 
@@ -144,8 +152,17 @@ class SameVehicleAgent:
             dict - containing claim_rejected and final status
         """
         if state.status == "failed":
-            if state.retry_count >= 3:
-                print(f"  [SameVehicle] Max retries exhausted! Sending claim {state.claim_id} to admin.")
+            if state.error and "No vehicle images found" in state.error:
+                print(f"  [SameVehicle] Rejecting claim {state.claim_id}: {state.error}")
+                try:
+                    self._update_claim_status_tool.invoke({
+                        "status": "rejected",
+                        "ai_verdict": f"Claim rejected: {state.error}",
+                    })
+                except Exception as e:
+                    print(f"  Failed to reject claim: {str(e)}")
+            else:
+                print(f"  [SameVehicle] Technical failure! Sending claim {state.claim_id} to admin.")
                 try:
                     self._update_claim_status_tool.invoke({
                         "status": "under_review",
