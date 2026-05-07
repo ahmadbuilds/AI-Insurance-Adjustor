@@ -1,6 +1,6 @@
 
 
-export type ClaimStatus = "pending" | "under_review" | "approved" | "rejected";
+export type ClaimStatus = "pending" | "under_review" | "approved" | "rejected" | "technical_failure" | "closed";
 
 export interface ClaimUser {
   id: string;
@@ -42,6 +42,7 @@ export interface AdminClaim {
   updated_at: string;
   
   user: ClaimUser | null;
+  has_technical_failure?: boolean;
 }
 
 export interface AdminClaimDetail extends AdminClaim {
@@ -98,6 +99,20 @@ export const STATUS_CONFIG: Record<ClaimStatus, StatusConfig> = {
     ringClass: "ring-red-500/25",
     dotClass: "bg-red-400",
   },
+  technical_failure: {
+    label: "Technical Failure",
+    colorClass: "text-amber-400",
+    bgClass: "bg-amber-500/10",
+    ringClass: "ring-amber-500/25",
+    dotClass: "bg-amber-400",
+  },
+  closed: {
+    label: "Closed",
+    colorClass: "text-gray-400",
+    bgClass: "bg-gray-500/10",
+    ringClass: "ring-gray-500/25",
+    dotClass: "bg-gray-400",
+  },
 };
 
 export const ALL_STATUSES: Array<ClaimStatus | "all"> = [
@@ -106,4 +121,6 @@ export const ALL_STATUSES: Array<ClaimStatus | "all"> = [
   "under_review",
   "pending",
   "rejected",
+  "technical_failure",
+  "closed"
 ];
