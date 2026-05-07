@@ -29,7 +29,7 @@ export function LandingNavbar() {
       animate={{ y: 0 }}
       transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
     >
-      <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+      <div className="max-w-7xl mx-auto px-6 h-16 flex items-center relative">
         {/* Logo */}
         <div
           className="flex items-center gap-3 cursor-pointer"
@@ -44,8 +44,8 @@ export function LandingNavbar() {
           <span className="text-white font-semibold text-sm tracking-tight">Immaculate Aegis</span>
         </div>
 
-        {/* Desktop nav */}
-        <nav className="hidden md:flex items-center gap-1">
+        {/* Desktop nav - absolutely centered */}
+        <nav className="hidden md:flex items-center gap-2 absolute left-1/2 -translate-x-1/2">
           {links.map((l) => {
             const isHash = l.href.startsWith("#");
             const isHome = l.href === "/";
@@ -92,7 +92,7 @@ export function LandingNavbar() {
         </nav>
 
         {/* CTA */}
-        <div className="hidden md:flex items-center gap-3">
+        <div className="hidden md:flex items-center gap-3 ml-auto">
           <Link href="/login" className="px-4 py-2 text-sm bg-white text-black rounded-full font-medium hover:bg-white/90 transition-colors">
             Sign in
           </Link>
