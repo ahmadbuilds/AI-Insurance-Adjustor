@@ -7,9 +7,6 @@ import type {
 } from "../types/admin-claims.types";
 
 
-
-
-
 class AdminClaimsService {
   private static instance: AdminClaimsService;
 
@@ -23,7 +20,6 @@ class AdminClaimsService {
   }
 
   
-
   public async assertAdmin(): Promise<string> {
     const supabase = createClient();
     const {
@@ -53,7 +49,7 @@ class AdminClaimsService {
 
     const { data: claims, error } = await supabase
       .from("claims")
-      .select("id, user_id, title, description, status, ai_verdict, created_at, updated_at")
+      .select("id, user_id, title, description, status, ai_verdict, created_at, updated_at, admin_notifications(is_resolved, message)")
       .order("created_at", { ascending: false });
 
     if (error) throw new Error(error.message);
@@ -68,10 +64,20 @@ class AdminClaimsService {
 
     const userMap = new Map((users ?? []).map((u) => [u.id, u]));
 
-    return claims.map((claim) => ({
-      ...claim,
-      user: userMap.get(claim.user_id) ?? null,
-    }));
+    return claims.map((claim) => {
+      const unresolvedNotifications = (claim.admin_notifications as any[])?.filter(
+        n => n.is_resolved === false && n.message !== "Manual review required: Liability passed, but AI policy analysis needs final human validation before payout."
+      );
+      const has_technical_failure = unresolvedNotifications && unresolvedNotifications.length > 0;
+      
+      const { admin_notifications, ...rest } = claim;
+      
+      return {
+        ...rest,
+        has_technical_failure,
+        user: userMap.get(claim.user_id) ?? null,
+      };
+    });
   }
 
   
@@ -80,7 +86,7 @@ class AdminClaimsService {
 
     const { data: claims, error } = await supabase
       .from("claims")
-      .select("id, user_id, title, description, status, ai_verdict, created_at, updated_at")
+      .select("id, user_id, title, description, status, ai_verdict, created_at, updated_at, admin_notifications(is_resolved, message)")
       .eq("status", status)
       .order("created_at", { ascending: false });
 
@@ -95,10 +101,20 @@ class AdminClaimsService {
 
     const userMap = new Map((users ?? []).map((u) => [u.id, u]));
 
-    return claims.map((claim) => ({
-      ...claim,
-      user: userMap.get(claim.user_id) ?? null,
-    }));
+    return claims.map((claim) => {
+      const unresolvedNotifications = (claim.admin_notifications as any[])?.filter(
+        n => n.is_resolved === false && n.message !== "Manual review required: Liability passed, but AI policy analysis needs final human validation before payout."
+      );
+      const has_technical_failure = unresolvedNotifications && unresolvedNotifications.length > 0;
+      
+      const { admin_notifications, ...rest } = claim;
+
+      return {
+        ...rest,
+        has_technical_failure,
+        user: userMap.get(claim.user_id) ?? null,
+      };
+    });
   }
 
   
@@ -147,9 +163,7 @@ class AdminClaimsService {
     };
   }
 
-  /**
-   * Resolve an admin notification and resume the AI workflow via the FastAPI backend.
-   */
+ 
   public async resolveNotificationAndResume(
     notificationId: string,
     claimId: string,
@@ -157,7 +171,7 @@ class AdminClaimsService {
   ): Promise<void> {
     const supabase = createClient();
 
-    // 1. Mark the notification as resolved
+
     const { error: updateErr } = await supabase
       .from("admin_notifications")
       .update({ is_resolved: true, resolved_at: new Date().toISOString() })
@@ -165,11 +179,10 @@ class AdminClaimsService {
 
     if (updateErr) throw new Error(updateErr.message);
 
-    // 2. Get the current session token
+
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) throw new Error("Not authenticated.");
 
-    // 3. Call FastAPI /resume_workflow to push completion event to Redis
     const FASTAPI_URL = process.env.NEXT_PUBLIC_FASTAPI_URL || "http://127.0.0.1:8000";
     const res = await fetch(`${FASTAPI_URL}/resume_workflow`, {
       method: "POST",
@@ -201,28 +214,63 @@ class AdminClaimsService {
     return data;
   }
 
-  public async resolveRAGDecision(claimId: string, action: "payment_approved" | "rejected"): Promise<void> {
+  public async resolveRAGDecision(claimId: string, action: "payment_approved" | "rejected", rejectionReason?: string): Promise<void> {
+    const FASTAPI_URL = process.env.NEXT_PUBLIC_FASTAPI_URL || "http://127.0.0.1:8000";
     const supabase = createClient();
     const { data: { session } } = await supabase.auth.getSession();
-    if (!session) throw new Error("Not authenticated.");
+    
+    const payload: any = { claim_id: claimId, action };
+    if (action === "rejected" && rejectionReason) {
+      payload.rejection_reason = rejectionReason;
+    }
 
-    const FASTAPI_URL = process.env.NEXT_PUBLIC_FASTAPI_URL || "http://127.0.0.1:8000";
     const res = await fetch(`${FASTAPI_URL}/resolve_rag`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${session.access_token}`,
+        ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
       },
-      body: JSON.stringify({
-        claim_id: claimId,
-        action: action,
-      }),
+      body: JSON.stringify(payload),
     });
 
     if (!res.ok) {
-      const body = await res.json().catch(() => ({}));
-      throw new Error(body.detail || "Failed to resolve RAG decision.");
+      const errorData = await res.json().catch(() => null);
+      throw new Error(errorData?.detail || `FastAPI /resolve_rag failed with status ${res.status}`);
     }
+  }
+
+  public async fetchClaimAgentResults(claimId: string): Promise<any> {
+    const supabase = createClient();
+    
+    const fetchLatest = async (table: string) => {
+      const { data } = await supabase.from(table).select("*").eq("claim_id", claimId).order("created_at", { ascending: false }).limit(1).maybeSingle();
+      return data;
+    };
+
+    const [
+      classification,
+      sameVehicle,
+      vehicleType,
+      damageDetection,
+      liability,
+      rag
+    ] = await Promise.all([
+      fetchLatest("classification_results"),
+      fetchLatest("same_vehicle_results"),
+      fetchLatest("vehicle_type_results"),
+      fetchLatest("damage_detection_results"),
+      fetchLatest("liability_results"),
+      fetchLatest("rag_results")
+    ]);
+
+    return {
+      classification,
+      sameVehicle,
+      vehicleType,
+      damageDetection,
+      liability,
+      rag
+    };
   }
 
   
